@@ -118,9 +118,9 @@ def initialize_map(ax, row, col, datacrs):
     if col != 0:
         gl.left_labels = None
 
-def make_legend(colors,markers,lines):
+def make_legend(colors,markers,lines, ax):
     labels, handles = zip(*[(k, mpatches.Rectangle((0, 0), 1, 1, facecolor=v)) for k,v in colors.items()])
-    legend1 = pyplot.legend(handles, labels, loc=4,
+    legend1 = ax.legend(handles, labels, loc=4,
                             framealpha=1, bbox_to_anchor=(1.105, 0.27))
     custom_lines = []
     lebels = []
@@ -128,7 +128,7 @@ def make_legend(colors,markers,lines):
         custom_lines.append(Line2D([0], [0], color='k', lw=1,
                                 linestyle=lines[line], marker=markers[marker]))
         lebels.append(line)
-    legend2 = pyplot.legend(custom_lines, lebels, loc=4, framealpha=1,
+    legend2 = ax.legend(custom_lines, lebels, loc=4, framealpha=1,
                             bbox_to_anchor=(1.11, 0.1))
     return legend1, legend2    
 
@@ -239,7 +239,7 @@ for exp in data:
     ax.scatter(lons.iloc[-1],lats.iloc[-1], s=150, marker=marker,
                 facecolor=color, zorder=100)
     
-legend1, legend2 = make_legend(colors,markers,lines)
+legend1, legend2 = make_legend(colors,markers,lines, ax)
 ax.add_artist(legend1)
 ax.add_artist(legend2)
 
@@ -344,13 +344,11 @@ for exp in data:
                     markerfacecolor='None', linewidth=1.5, linestyle=ls,
                     c=color, label=exp, zorder=zorder)
     
-legend1, legend2 = make_legend(colors,markers,lines)
-for ax in [ax1, ax2]:
-    ax.add_artist(legend1)
-    ax.add_artist(legend2)
-
 fname3 = fname+'_min-slp'
 fname4 = fname+'_distance'
-for fname in [fname3, fname4]:
+for fname, ax in zip([fname3, fname4], [ax1, ax2]):
+    legend1, legend2 = make_legend(colors,markers,lines, ax)
+    ax.add_artist(legend1)
+    ax.add_artist(legend2)
     plt.savefig(fname+'.png', dpi=500)
     print(fname+'.png created!')
