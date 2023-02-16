@@ -43,64 +43,6 @@ lines = {'ERA':'solid', 'wsm6':'dashed','thompson':'dashdot',
 markers = {'ERA':'o', 'wsm6':'x', 'thompson':'P','kessler':'D','off':'s'}
 
 
-def get_exp_name(bench):
-    expname = bench.split('/')[-1].split('run.')[-1]
-    microp = expname.split('.')[0].split('_')[-1]
-    cumulus = expname.split('.')[-1].split('_')[-1] 
-    return microp+'_'+cumulus
-
-def get_times_nml(namelist,model_data):
-    ## Identify time range of simulation using namelist ##
-    # Get simulation start and end dates as strings
-    start_date_str = namelist['nhyd_model']['config_start_time']
-    run_duration_str = namelist['nhyd_model']['config_run_duration']
-    # Convert strings to datetime object
-    start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d_%H:%M:%S')
-    
-    run_duration = datetime.datetime.strptime(run_duration_str,'%d_%H:%M:%S')
-    # Get simulation finish date as object and string
-    finish_date  = start_date + datetime.timedelta(days=run_duration.day,
-                                                   hours=run_duration.hour)
-    ## Create a range of dates ##
-    times = pd.date_range(start_date,finish_date,periods=len(model_data.Time)+1)[1:]
-    return times
-
-@dask.delayed
-def open_dataset_with_dask(bench, times):
-    return xr.open_dataset(bench+'/latlon.nc').sortby(
-            'latitude', ascending=False).sel(
-                latitude=slice(-20,-35),longitude=slice(-55,-30)
-                ).assign_coords({"Time":times})
-
-def pressure_to_slp(pressure,z, zlevs):
-    pres_height = interplevel(pressure, z[:,:-1], zlevs)
-    slp = pres_height.isel(level=1)
-    return slp
-
-def get_track(track_variable, TimeIndexer):
-    min_var, times = [], []
-    lats, lons = [], []
-    for t in track_variable[TimeIndexer]:
-        datestr = pd.to_datetime(t.values)
-        times.append(str(datestr))
-        ivar = track_variable.sel({TimeIndexer:t})
-        
-        varmin = ivar.min()
-        min_var.append(float(varmin))
-        
-        loc = ivar.argmin(dim=['latitude','longitude'])
-        lats.append(float(ivar['latitude'][loc['latitude']]))
-        lons.append(float(ivar['longitude'][loc['longitude']]))
-    
-    track = pd.DataFrame([lons, lats, min_var]).transpose()
-    track.columns = ['lon','lat','min']
-    track.index = times
-    return track
-
-def calculate_distance(row):
-    start = (row['lat_ref'], row['lon_ref'])
-    end = (row['lat_model'], row['lon_model'])
-    return geodesic(start, end).km
 
 def initialize_map(ax, row, col, datacrs):
     ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
@@ -132,78 +74,7 @@ def make_legend(colors,markers,lines, ax):
                             bbox_to_anchor=(1.11, 0.1))
     return legend1, legend2    
 
-## Parser options ##
-parser = argparse.ArgumentParser()
-parser.add_argument('-bdir','--bench_directory', type=str, required=True,
-                        help='''path to benchmark directory''')
-parser.add_argument('-o','--output', type=str, default=None,
-                        help='''output name to append file''')
-parser.add_argument('-e','--ERA5', type=str, default=None,
-                        help='''wether to validade with ERA5 data''')
-args = parser.parse_args()
 
-## Start the code ##
-benchs = glob.glob(args.bench_directory+'/run*')
-
-# Dummy for getting model times
-model_output = benchs[0]+'/latlon.nc'
-namelist_path = benchs[0]+"/namelist.atmosphere"
-
-# open data and namelist
-model_data = xr.open_dataset(model_output).sortby(
-        'latitude', ascending=False).sel(
-            latitude=slice(-20,-35),longitude=slice(-55,-30))
-namelist = f90nml.read(glob.glob(namelist_path)[0])
-times = get_times_nml(namelist,model_data)
-first_day = datetime.datetime.strftime(times[0], '%Y-%m-%d %HZ')
-last_day = datetime.datetime.strftime(times[-1], '%Y-%m-%d %HZ')                      
-print('Analysis is from',first_day,'to',last_day)  
-
-# For interpolating pressure from height to isobaric
-z = model_data.zgrid.expand_dims({'Time':times})
-zmax = float(z.max())
-dz = 100
-zlevs = np.arange(0, zmax, dz) * units.m
-
-print('\nOpening all data and putting it into a dictionary...')
-data = {}
-data['ERA'] = {}
-mslp = xr.open_dataset(args.ERA5, engine='cfgrib',
-                filter_by_keys={'typeOfLevel': 'surface'}
-                ).sel(time=slice(times[0],times[-1]),
-                latitude=slice(-20,-35),longitude=slice(-55,-30)).msl
-mslp = (mslp * units(mslp.units)).metpy.convert_units('hPa')                    
-data['ERA']['slp'] = mslp
-data['ERA']['track'] = get_track(data['ERA']['slp'], 'time')                                          
-                      
-for bench in benchs:
-    
-    experiment = get_exp_name(bench)
-    print('\n',experiment)
-    
-    print('computing slp...')
-    # model_data = open_dataset_with_dask(bench,times).compute()
-    model_data  = xr.open_dataset(bench+'/latlon.nc').sortby(
-            'latitude', ascending=False).sel(
-                latitude=slice(-20,-35),longitude=slice(-55,-30)
-                ).assign_coords({"Time":times})
-    pressure = (model_data['pressure'] * units(model_data['pressure'].units)
-               ).metpy.convert_units('hPa')
-    slp = pressure_to_slp(pressure,z, zlevs)
-    slp = slp * units('hPa')       
-    print('tracking the system...')
-    track = get_track(slp, 'Time')
-    
-    df_dist = pd.DataFrame({
-    'lat_ref': data['ERA']['track'].lat, 'lon_ref': data['ERA']['track'].lon,
-    'lat_model': track.lat, 'lon_model': track.lon})
-    
-    track['distance'] =  df_dist.apply(
-        lambda row: calculate_distance(row), axis=1)
-    
-    data[experiment] = {}
-    data[experiment]['slp'] = slp
-    data[experiment]['track'] = track
     
 
 # =============================================================================
@@ -218,7 +89,6 @@ initialize_map(ax, 0, 0, datacrs)
 
 for exp in data:   
     
-    slp = data[exp]['slp']
     track = data[exp]['track']
     lons, lats, min_slp = track['lon'], track['lat'], track['min']
     
@@ -275,7 +145,6 @@ for row in range(6):
         
         ax.text(-50,-22,experiment,bbox=dict(facecolor='w', alpha=0.5))
         
-        model_data = data[experiment]['slp']
         track = data[experiment]['track']
         
         lons, lats, min_slp = track['lon'], track['lat'], track['min']
