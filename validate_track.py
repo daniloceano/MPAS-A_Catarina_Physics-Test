@@ -32,6 +32,8 @@ import cartopy
 import dask
 import dask.distributed
 
+from geopy.distance import geodesic
+
 colors = {'ERA':'k', 'fritsch':'tab:orange','tiedtke':'tab:red',
           'ntiedtke':'tab:purple', 'freitas':'tab:brown','off':'tab:green'}
 
@@ -75,7 +77,6 @@ def pressure_to_slp(pressure,z, zlevs):
     slp = pres_height.isel(level=1)
     return slp
 
-
 def get_track(track_variable, TimeIndexer):
     min_var, times = [], []
     lats, lons = [], []
@@ -95,6 +96,11 @@ def get_track(track_variable, TimeIndexer):
     track.columns = ['lon','lat','min']
     track.index = times
     return track
+
+def calculate_distance(row):
+    start = (row['lat_ref'], row['lon_ref'])
+    end = (row['lat_model'], row['lon_model'])
+    return geodesic(start, end).km
 
 def initialize_map(ax, row, col, datacrs):
     ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
@@ -176,7 +182,11 @@ for bench in benchs:
     print('\n',experiment)
     
     print('computing slp...')
-    model_data = open_dataset_with_dask(bench,times).compute()
+    # model_data = open_dataset_with_dask(bench,times).compute()
+    model_data  = xr.open_dataset(bench+'/latlon.nc').sortby(
+            'latitude', ascending=False).sel(
+                latitude=slice(-20,-35),longitude=slice(-55,-30)
+                ).assign_coords({"Time":times})
     pressure = (model_data['pressure'] * units(model_data['pressure'].units)
                ).metpy.convert_units('hPa')
     slp = pressure_to_slp(pressure,z, zlevs)
@@ -184,9 +194,17 @@ for bench in benchs:
     print('tracking the system...')
     track = get_track(slp, 'Time')
     
+    df_dist = pd.DataFrame({
+    'lat_ref': data['ERA']['track'].lat, 'lon_ref': data['ERA']['track'].lon,
+    'lat_model': track.lat, 'lon_model': track.lon})
+    
+    track['distance'] =  df_dist.apply(
+        lambda row: calculate_distance(row), axis=1)
+    
     data[experiment] = {}
     data[experiment]['slp'] = slp
     data[experiment]['track'] = track
+    
 
 # =============================================================================
 # Plot all tracks in one image
@@ -287,8 +305,11 @@ print(fname2+'.png created!')
 # Plot minimum slp
 # =============================================================================
 print('plotting minimum SLP..')
-fig = plt.figure(figsize=(10, 13))
-ax = fig.add_subplot(1, 1, 1)
+plt.close('all')
+fig1 = plt.figure(figsize=(15, 12))
+fig2 = plt.figure(figsize=(15, 12))
+ax1 = fig1.add_subplot(1, 1, 1)
+ax2 = fig2.add_subplot(1, 1, 1)
 
 for exp in data:   
     
@@ -301,7 +322,7 @@ for exp in data:
     track = track.resample('1H').mean()
     
     time, min_slp = track.index, track['min']
-    
+        
     print('data range:',min_slp.min(),'to',min_slp.max())
     
     if exp == 'ERA':
@@ -309,19 +330,27 @@ for exp in data:
         zorder=100
     else:
         microp, cumulus = exp.split('_')[0], exp.split('_')[1]
+        distance = track['distance']
         
     ls = lines[microp]
     marker = markers[microp]
     color = colors[cumulus]
     
-    ax.plot(time,min_slp, markeredgecolor=color, marker=marker,
+    ax1.plot(time,min_slp, markeredgecolor=color, marker=marker,
                 markerfacecolor='None', linewidth=1.5, linestyle=ls,
                 c=color, label=exp, zorder=zorder)
+    if exp != 'ERA':
+        ax2.plot(time, distance, markeredgecolor=color, marker=marker,
+                    markerfacecolor='None', linewidth=1.5, linestyle=ls,
+                    c=color, label=exp, zorder=zorder)
     
 legend1, legend2 = make_legend(colors,markers,lines)
-ax.add_artist(legend1)
-ax.add_artist(legend2)
+for ax in [ax1, ax2]:
+    ax.add_artist(legend1)
+    ax.add_artist(legend2)
 
 fname3 = fname+'_min-slp'
-plt.savefig(fname3+'.png', dpi=500)
-print(fname3+'.png created!')
+fname4 = fname+'_distance'
+for fname in [fname3, fname4]:
+    plt.savefig(fname+'.png', dpi=500)
+    print(fname+'.png created!')
