@@ -7,14 +7,16 @@ Created on Fri Dec 30 13:23:07 2022
 """
 
 import pandas as pd
-import matplotlib.colors as colors
 import matplotlib.pyplot as plt
-import cmocean
 import glob
 import numpy as np
 import seaborn as sns
 import skill_metrics as sm
 from matplotlib import rcParams
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_absolute_percentage_error
+from sklearn.metrics import r2_score
+from scipy import stats as st
 
 era_exp_name = 'ERA5-ERA5'
 
@@ -108,7 +110,7 @@ def plot_taylor(data):
         fname = term
     plt.savefig('./Figures_48h/taylor/'+fname+'.png', dpi=300)
     print('Taylor diagram created for term: '+term)
-    
+      
     
 # ----------------------------------
 results = glob.glob('LEC_results_48h/*')
@@ -132,6 +134,8 @@ residuals_terms = ['RGz', 'RKz', 'RGe', 'RKe']
 
 palette = ['#3B95BF','#87BF4B','#BFAB37','k','#BF3D3B','#C2847A']
 
+results_ERA = pd.read_csv('./LEC_results_48h/ERA5-ERA5/ERA5-ERA5.csv')
+
 i = 0
 for exp in exps:
     print(exp)
@@ -142,7 +146,9 @@ for exp in exps:
     df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
     time = df.Datetime    
     
+    stats = {}
     for term in terms:
+        stats[term] = {}
         tmp = pd.DataFrame(df[term]).rename(columns={term:'value'})
         tmp['date'] = time
         tmp['term'] = term
@@ -167,6 +173,16 @@ for exp in exps:
             tmp['type'] = 'budget'
         else: 
             pass
+        
+        reference = results_ERA[term]
+        predicted = tmp['value']
+        
+        stats[term]['bias'] = np.mean(reference - predicted)        
+        stats[term]['mse'] = mean_squared_error(reference, predicted)
+        stats[term]['rmse'] = np.sqrt(stats[term]['mse'])
+        stats[term]['mae'] = mean_absolute_error(reference, predicted) 
+        stats[term]['mape'] = mean_absolute_percentage_error(reference, predicted)
+        stats[term]['R2'] = r2_score(reference, predicted)
             
         if i == 0:
             i += 1 
