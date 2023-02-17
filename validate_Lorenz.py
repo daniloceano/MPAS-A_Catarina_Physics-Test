@@ -1,122 +1,73 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed Feb 15 22:02:13 2023
+Created on Fri Dec 30 13:23:07 2022
 
 @author: danilocoutodsouza
 """
 
 import pandas as pd
-import matplotlib.colors as colors
 import matplotlib.pyplot as plt
-import cmocean
 import glob
 import numpy as np
-import matplotlib.gridspec as gridspec
-from matplotlib import rcParams
+import seaborn as sns
 import skill_metrics as sm
+from matplotlib import rcParams
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_absolute_percentage_error
+from sklearn.metrics import r2_score
+from scipy import stats as st
 
-msizes = [20,40,60,80,100]
-intervals = [3e5,4e5,5e5,6e5]
-norm = colors.TwoSlopeNorm(vmin=-3, vcenter=0, vmax=8)
-c='#383838'
+era_exp_name = 'ERA5-ERA5'
 
-def MarkerSizeKe(df):
+def plot_timeseries(data):
+    plt.close('all')
+    sns.set_theme(style="ticks", font_scale=2.2)
+    sns.set(rc={'figure.figsize':(10,15)})
+    g = sns.relplot(x="date", y="value", kind="line",
+                     size="source", size_order=['ERA5','MPAS-A'],
+                     style='microp', hue='cumulus', palette=palette,
+                     markers=True,data=data, legend='full')
+    g.set_xticklabels(rotation=30)
+    plt.title(term)
+    if term in budget_diff_terms:
+        fname = term[:3]
+    else:
+        fname = term
+    plt.savefig('./Figures_48h/timeseries/'+fname+'.png',dpi=300)
+    print('Time series created for term: '+fname)
     
-    data = df['Ke']
-
-    sizes = []
-    for val in data:
-        if val <= intervals[0]:
-            sizes.append(msizes[0])
-        elif val > intervals[0] and val <= intervals[1]:
-            sizes.append(msizes[1])
-        elif val > intervals[1] and val <= intervals[2]:
-            sizes.append(msizes[2])
-        elif val > intervals[2] and val <= intervals[3]:
-            sizes.append(msizes[3])
-        else:
-            sizes.append(msizes[4])
-    df['sizes'] = sizes
-    return df
-
-def LegendKe():
-    
-    # Plot legend
-    labels = ['< '+str(intervals[0]),
-              '< '+str(intervals[1]),
-              '< '+str(intervals[2]),
-              '< '+str(intervals[3]),
-              '> '+str(intervals[3])]
-    l1 = plt.scatter([],[],c='k', s=msizes[0],label=labels[0])
-    l2 = plt.scatter([],[], c='k', s=msizes[1],label=labels[1])
-    l3 = plt.scatter([],[],c='k', s=msizes[2],label=labels[2])
-    l4 = plt.scatter([],[],c='k', s=msizes[3],label=labels[3])
-    l5 = plt.scatter([],[],c='k', s=msizes[4],label=labels[4])
-    leg = plt.legend([l1, l2, l3, l4, l5], labels, ncol=1, frameon=False,
-                     fontsize=10, handlelength = 0.3, handleheight = 4,
-                     borderpad = 1.5, scatteryoffsets = [0.1], framealpha = 1,
-                handletextpad=1.5, title='Ke',
-                scatterpoints = 1, loc = 4,
-                bbox_to_anchor=(1.22, -0.3, 0.5, 1),labelcolor = '#383838')
-    leg._legend_box.align = "center"
-    plt.setp(leg.get_title(), color='#383838')
-    plt.setp(leg.get_title(),fontsize=12)
-    for i in range(len(leg.legendHandles)):
-        leg.legendHandles[i].set_color('#383838')
-        leg.legendHandles[i].set_edgecolor('gray')
-
-
-def LorenzPhaseSpace(ax, df, row, col):
-        
-    Ca = df['Ca']
-    Ck = df['Ck']
-    Ge = df['Ge']
-    RAe = df['Ge']+df['BAe']
-    Re = df['RKe']+df['BKe']
-    df['Rae'], df['Re'] = RAe, Re
-    
-    # Line plot
-    ax.plot(Ck,Ca,'-',c='gray',zorder=2,linewidth=3)
-    
-    s = MarkerSizeKe(df)['sizes']
-    ax.set_xlim(-15,2.5)
-    ax.set_ylim(-4,1)
-    
-    # lines in the center of the plot
-    ax.axhline(y=0,linewidth=3, alpha=0.6,c='#383838')
-    ax.axvline(x=0,linewidth=3,alpha=0.6,c='#383838')
+def get_stats(data):
+    ccoef, crmsd, sdev, exps = [], [], [], []
+    experiments = list(data['experiment'].unique())
+    data.index = data['date']
+    # Resample for 1H for standardization
+    reference = data[
+        data['experiment'] == era_exp_name].resample('1H').mean()['value']
+    # get experiments time range
+    min_time = data[data['experiment'] != era_exp_name].index.min()
+    max_time = data[data['experiment'] != era_exp_name].index.max()
+    # Slice data for using only times present in model data
+    reference = reference[(reference.index >= min_time) &
+                          (reference.index <= max_time)]
+    for experiment in experiments:
+        if experiment != era_exp_name:
+            predicted = data[
+                    data['experiment'] == experiment].resample('1H').mean()['value']
+            # Just to make sure
+            predicted = predicted[(predicted.index >= min_time) &
+                                  (predicted.index <= max_time)]
+            
+            # Compute and store stats
+            stats = sm.taylor_statistics(predicted,reference)
+            ccoef.append(stats['ccoef'][1])
+            crmsd.append(stats['crmsd'][1])
+            sdev.append(stats['sdev'][1])
+            exps.append(experiment)
+    ccoef, crmsd, sdev = np.array(ccoef),np.array(crmsd),np.array(sdev)
+    return sdev,crmsd,ccoef,exps
        
-    
-    # arrows connecting dots
-    ax.quiver(Ck[:-1], Ca[:-1],
-              (Ck[1:].values-Ck[:-1].values),
-              (Ca[1:].values-Ca[:-1].values),
-              angles='xy', scale_units='xy', scale=1)
-    
-    # plot the moment of maximum intensity
-    ax.scatter(Ck.loc[s.idxmax()],Ca.loc[s.idxmax()],
-               c='None',s=s.loc[s.idxmax()]*1.1,
-               zorder=100,edgecolors='k', norm=norm, linewidth=3)
-    
-    dots = ax.scatter(Ck,Ca,c=Ge,cmap=cmocean.cm.curl,s=s,zorder=100,
-                    edgecolors='grey', norm=norm)
-        
-    ax.text(Ck[0], Ca[0],'A',
-            zorder=101,fontsize=18,horizontalalignment='center',
-            verticalalignment='center')
-    ax.text(Ck.iloc[-1], Ca.iloc[-1], 'Z',
-            zorder=101,fontsize=18,horizontalalignment='center',
-            verticalalignment='center')
-    
-    if row == 5:
-        ax.set_xlabel('Ck', fontsize=12,c='#383838')
-    if col == 0:
-        ax.set_ylabel('Ca', fontsize=12,c='#383838')
-        
-    return dots
-
-def plot_taylor(sdevs,crmsds,ccoefs,experiments):
+def taylor_diagram(sdevs,crmsds,ccoefs,experiments):
     '''
     Produce the Taylor diagram
     Label the points and change the axis options for SDEV, CRMSD, and CCOEF.
@@ -138,59 +89,113 @@ def plot_taylor(sdevs,crmsds,ccoefs,experiments):
                       markerLabelColor = 'b', 
                       markerLabel = experiments,
                       markerColor = 'r', markerLegend = 'on', markerSize = 15, 
-                      tickRMS = tickRMS, titleRMS = 'off', widthRMS = 2.0,
+                      titleRMS = 'off', widthRMS = 2.0,
                       colRMS = '#728B92', styleRMS = '--',  
                       widthSTD = 2, styleSTD = '--', colSTD = '#8A8A8A',
-                      titleSTD = 'on',
                       colCOR = 'k', styleCOR = '-',
-                      widthCOR = 1.0, titleCOR = 'off',
+                      widthCOR = 1.0, titleCOR = 'on',
                       colObs = 'k', markerObs = '^',
-                      titleOBS = 'IMERG', styleObs =':',
+                      titleOBS = 'Obs.', styleObs =':',
                       axismax = axismax, alpha = 1)
-            
-era_file = glob.glob('LEC_results_48h/*MPAS*/*MPAS*.csv')[0]
-era_data = pd.read_csv(era_file)
-era_data['Datetime'] = pd.to_datetime(era_data.Date
-                                    ) + pd.to_timedelta(era_data.Hour,unit='h')
+    
+def plot_taylor(data):
+    plt.close('all')
+    plt.figure(figsize=(12,10))
+    stats = get_stats(data)
+    sdev,crmsd,ccoef,expnames = stats[0],stats[1],stats[2],stats[3]
+    taylor_diagram(sdev,crmsd,ccoef,expnames)
+    if term in budget_diff_terms:
+        fname = term[:3]
+    else:
+        fname = term
+    plt.savefig('./Figures_48h/taylor/'+fname+'.png', dpi=300)
+    print('Taylor diagram created for term: '+term)
+      
+    
+# ----------------------------------
+results = glob.glob('LEC_results_48h/*')
+exps = []
+for exp in results:
+    exps.append(exp.split('/')[1].split('_MPAS_track')[0])
+    
+terms = ['Az', 'Ae', 'Kz', 'Ke',
+         'Cz', 'Ca', 'Ck', 'Ce',
+         'BAz', 'BAe', 'BKz', 'BKe',
+         'Gz', 'Ge',
+         '∂Az/∂t (finite diff.)', '∂Ae/∂t (finite diff.)',
+         '∂Kz/∂t (finite diff.)','∂Ke/∂t (finite diff.)',
+         'RGz', 'RGe', 'RKz', 'RKe']
+energy_terms = ['Az','Ae','Kz','Ke']
+conversion_terms = ['Cz','Ca','Ck','Ce']
+boundary_terms = ['BAz', 'BAe', 'BKz', 'BKe']
+budget_diff_terms = ['∂Az/∂t (finite diff.)', '∂Ae/∂t (finite diff.)',
+                 '∂Kz/∂t (finite diff.)', '∂Ke/∂t (finite diff.)']
+residuals_terms = ['RGz', 'RKz', 'RGe', 'RKe']
 
+palette = ['#3B95BF','#87BF4B','#BFAB37','k','#BF3D3B','#C2847A']
 
-plt.close('all')
-fig = plt.figure(figsize=(10, 13))
-gs = gridspec.GridSpec(6, 3)
-results = glob.glob('LEC_results_48h/*track')
+results_ERA = pd.read_csv('./LEC_results_48h/ERA5-ERA5/ERA5-ERA5.csv')
+
 i = 0
-for row in range(6):
-    for col in range(3):
+for exp in exps:
+    print(exp)
+    dirname = exp.split('/')[-1]
+    outfile = glob.glob(
+        './LEC_results_48h/'+str(dirname)+'*'+'/'+str(dirname)+'*csv')[0]
+    df = pd.read_csv(outfile)
+    df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
+    time = df.Datetime    
     
-        exp = results[i]
-        dirname = exp.split('/')[-1]
-        outfile = glob.glob(
-            './LEC_results_48h/'+str(dirname)+'*'+'/'+str(dirname)+'*csv')[0]
-                
-        # Open data
-        df = pd.read_csv(outfile)
-        df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour,
-                                                                   unit='h')
-    
-        ax = fig.add_subplot(gs[row, col], frameon=True)
-        dots = LorenzPhaseSpace(ax, df, row, col)
+    stats = {}
+    for term in terms:
+        stats[term] = {}
+        tmp = pd.DataFrame(df[term]).rename(columns={term:'value'})
+        tmp['date'] = time
+        tmp['term'] = term
+        tmp['microp'] = exp.split('-')[0]
+        tmp['cumulus'] = exp.split('-')[-1]
+        tmp['experiment'] = exp
         
-        expname = exp.split('/')[1].split('_MPAS_track')[0]
-        ax.text(-15,1.5,expname,c=c)
+        if 'ERA5'in exp:
+            tmp['source'] = 'ERA5'
+        else:
+            tmp['source'] = 'MPAS-A'
         
-        i+=1
+        if term in energy_terms:
+            tmp['type'] = 'energy'
+        elif term in conversion_terms:
+            tmp['type'] = 'conversion'
+        elif term in boundary_terms :
+            tmp['type'] = 'boundary'
+        elif term in residuals_terms:
+            tmp['type'] = 'residual'
+        elif term in budget_diff_terms:
+            tmp['type'] = 'budget'
+        else: 
+            pass
         
-LegendKe()
+        reference = results_ERA[term]
+        predicted = tmp['value']
+        
+        stats[term]['bias'] = np.mean(reference - predicted)        
+        stats[term]['mse'] = mean_squared_error(reference, predicted)
+        stats[term]['rmse'] = np.sqrt(stats[term]['mse'])
+        stats[term]['mae'] = mean_absolute_error(reference, predicted) 
+        stats[term]['mape'] = mean_absolute_percentage_error(reference, predicted)
+        stats[term]['R2'] = r2_score(reference, predicted)
+            
+        if i == 0:
+            i += 1 
+            df_sns = tmp
+        else:
+            df_sns = pd.concat([df_sns, tmp])
+            
+df_sns.index = np.arange(0,len(df_sns))
 
-# Colorbar
-cax = fig.add_axes([ax.get_position().x1+0.02,
-                ax.get_position().y0+0.3,0.02,ax.get_position().height*3])
-cbar = plt.colorbar(dots, extend='both',cax=cax)
-cbar.ax.set_ylabel('Ge',fontsize=12,verticalalignment='bottom',c='#383838',
-                   labelpad=10)
-for t in cbar.ax.get_yticklabels():
-      t.set_fontsize(10) 
-      
-plt.subplots_adjust(right=0.85,hspace=0.4, bottom=0.05, top=0.95, left=0.06)     
-      
-plt.savefig('Figures_48h/validate_LPS.png',dpi=500)
+
+
+for term in terms:
+    data = df_sns[df_sns['term'] == term]
+    
+    plot_timeseries(data)
+    plot_taylor(data)
