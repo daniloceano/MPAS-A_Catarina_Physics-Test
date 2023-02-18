@@ -15,10 +15,31 @@ import skill_metrics as sm
 from matplotlib import rcParams
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.metrics import mean_absolute_percentage_error
-from sklearn.metrics import r2_score
-from scipy import stats as st
+import itertools
 
 era_exp_name = 'ERA5-ERA5'
+
+terms = ['Az', 'Ae', 'Kz', 'Ke',
+         'Cz', 'Ca', 'Ck', 'Ce',
+         'BAz', 'BAe', 'BKz', 'BKe',
+         'Gz', 'Ge',
+         '∂Az/∂t (finite diff.)', '∂Ae/∂t (finite diff.)',
+         '∂Kz/∂t (finite diff.)','∂Ke/∂t (finite diff.)',
+         'RGz', 'RGe', 'RKz', 'RKe']
+energy_terms = ['Az','Ae','Kz','Ke']
+conversion_terms = ['Cz','Ca','Ck','Ce']
+boundary_terms = ['BAz', 'BAe', 'BKz', 'BKe']
+budget_diff_terms = ['∂Az/∂t (finite diff.)', '∂Ae/∂t (finite diff.)',
+                 '∂Kz/∂t (finite diff.)', '∂Ke/∂t (finite diff.)']
+residuals_terms = ['RGz', 'RKz', 'RGe', 'RKe']
+generation_terms = ['RGz', 'RGe', 'Gz', 'Ge']
+
+
+palette = ['#3B95BF','#87BF4B','#BFAB37','k','#BF3D3B','#C2847A']
+c = ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B']
+
+results_ERA = pd.read_csv('./LEC_Results_48h/ERA5-ERA5/ERA5-ERA5.csv')
+
 
 def plot_timeseries(data):
     plt.close('all')
@@ -89,7 +110,7 @@ def taylor_diagram(sdevs,crmsds,ccoefs,experiments):
                       markerLabelColor = 'b', 
                       markerLabel = experiments,
                       markerColor = 'r', markerLegend = 'on', markerSize = 15, 
-                      titleRMS = 'off', widthRMS = 2.0,
+                      titleRMS = 'off', widthRMS = 2.0,tickRMS = tickRMS,
                       colRMS = '#728B92', styleRMS = '--',  
                       widthSTD = 2, styleSTD = '--', colSTD = '#8A8A8A',
                       colCOR = 'k', styleCOR = '-',
@@ -111,44 +132,138 @@ def plot_taylor(data):
     plt.savefig('./Figures_48h/taylor/'+fname+'.png', dpi=300)
     print('Taylor diagram created for term: '+term)
       
+def export_stats_by_term(stats):
+    # Create data frames for each variable, contaning the metrics 
+    # for all experiments as rows
+    dict_stats_term = {}
+    for term in terms:
+        term_dfs = []
+        for exp, df in stats.items():
+            term_dfs.append(df.loc[term])
+        df_term = pd.concat(term_dfs, axis=1)
+        df_term.columns = stats.keys()
+        df_term = df_term.T
+        if '∂' in term:
+            term = term.split('/')[0]
+        df_term.to_csv('stats/terms/stats_Lorenz_'+term+'.csv')    
+        dict_stats_term[term] = df_term
+    return dict_stats_term
+
+
+def terms_label(term):
+    if term in energy_terms:
+        label = 'energy'
+    elif term in conversion_terms:
+        label = 'conversion'
+    elif term in boundary_terms :
+        label = 'boundary'
+    elif term in residuals_terms:
+        label = 'residual'
+    elif term in generation_terms:
+        label = 'generation'
+    elif (term in budget_diff_terms) or ('∂' in term):
+        label = 'budget'
+    else: 
+        pass
+    return label
+
+def bar_plot_terms_metrics(stats):
+
+    experiments = [i for i in exps if i != 'ERA5-ERA5']
     
+    x = np.arange(0,len(experiments)*4,4)  # the label locations
+    width = 0.5  # the width of the bars
+    
+    dict_stats_term = export_stats_by_term(stats)
+    df_stats = stats[experiments[0]]
+    
+    for metric in list(df_stats.keys()):
+        for term in terms:
+                
+            if '∂' in term:
+                term = term.split('/')[0]
+            data = dict_stats_term[term][metric].drop('ERA5-ERA5')
+            data_norm =(data-data.min())/(data.max()-data.min())
+            
+            for d, n in zip([data,data_norm],['','_norm']):
+                
+                plt.close('all')
+                fig = plt.figure(figsize=(10,10))
+                ax = fig.add_subplot(111)
+                multiplier = 0
+            
+                offset = width * multiplier
+                ax.bar(x+offset,d, width, label=term, color=c[multiplier])
+                multiplier += 1
+                
+                ax.set_ylabel(metric)
+                ax.set_xticks(x, experiments, rotation=30, ha='right')
+                ax.legend(loc='upper left')
+                ax.grid(color='grey',linewidth=0.5, alpha=0.4, linestyle='dashed')
+                fname = 'Figures_48h/Lorenz/'+term+'_'+metric+n+'.png'
+                fig.savefig(fname, dpi=500)
+                print(fname,'saved')
+                
+def test_for_rmse_r(stats,r_val,rmse_val):
+            
+    dict_stats_term = export_stats_by_term(stats)
+    bad_schemes = {}
+    
+    for term in terms:
+            
+        if '∂' in term:
+            term = term.split('/')[0]
+        r = dict_stats_term[term]['r'].drop('ERA5-ERA5')
+        r_norm =  (r-r.min())/(r.max()-r.min())
+        rmse = dict_stats_term[term]['rmse'].drop('ERA5-ERA5')
+        rmse_norm = (rmse-rmse.min())/(rmse.max()-rmse.min())
+        
+        df = pd.DataFrame(r_norm,columns=['r_norm'])
+        df['rmse_norm'] = rmse_norm
+        reproved = (df[(df.r_norm <= r_val) | (df.rmse_norm >= rmse_val)]).index.to_list()
+        bad_schemes[term] = reproved
+        
+        # df_test = df.where(df.r >= 0.7).where(df.rmse_norm <= 0.2)
+    return bad_schemes
+    
+def get_list_of_reproveds(bad_schemes):
+    
+    bad_schemes = pd.DataFrame(
+        dict([ (k,pd.Series(v)) for k,v in bad_schemes.items() ]))
+    
+    reproved_schemes = []
+    
+    for col in bad_schemes.columns:
+        
+        p = bad_schemes[col].dropna().to_list()
+        for i in p:
+            reproved_schemes.append(i)
+            
+    reproved_schemes = pd.Series(reproved_schemes).unique()
+    
+    return reproved_schemes
+
+
 # ----------------------------------
-results = glob.glob('LEC_results_48h/*')
+results = glob.glob('LEC_Results_48h/*')
 exps = []
 for exp in results:
     exps.append(exp.split('/')[1].split('_MPAS_track')[0])
-    
-terms = ['Az', 'Ae', 'Kz', 'Ke',
-         'Cz', 'Ca', 'Ck', 'Ce',
-         'BAz', 'BAe', 'BKz', 'BKe',
-         'Gz', 'Ge',
-         '∂Az/∂t (finite diff.)', '∂Ae/∂t (finite diff.)',
-         '∂Kz/∂t (finite diff.)','∂Ke/∂t (finite diff.)',
-         'RGz', 'RGe', 'RKz', 'RKe']
-energy_terms = ['Az','Ae','Kz','Ke']
-conversion_terms = ['Cz','Ca','Ck','Ce']
-boundary_terms = ['BAz', 'BAe', 'BKz', 'BKe']
-budget_diff_terms = ['∂Az/∂t (finite diff.)', '∂Ae/∂t (finite diff.)',
-                 '∂Kz/∂t (finite diff.)', '∂Ke/∂t (finite diff.)']
-residuals_terms = ['RGz', 'RKz', 'RGe', 'RKe']
-
-palette = ['#3B95BF','#87BF4B','#BFAB37','k','#BF3D3B','#C2847A']
-
-results_ERA = pd.read_csv('./LEC_results_48h/ERA5-ERA5/ERA5-ERA5.csv')
 
 i = 0
+stats = {}
 for exp in exps:
     print(exp)
     dirname = exp.split('/')[-1]
     outfile = glob.glob(
-        './LEC_results_48h/'+str(dirname)+'*'+'/'+str(dirname)+'*csv')[0]
+        './LEC_Results_48h/'+str(dirname)+'*'+'/'+str(dirname)+'*csv')[0]
     df = pd.read_csv(outfile)
     df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
     time = df.Datetime    
     
-    stats = {}
+    stats_exp = {}
     for term in terms:
-        stats[term] = {}
+        stats_exp[term] = {}
         tmp = pd.DataFrame(df[term]).rename(columns={term:'value'})
         tmp['date'] = time
         tmp['term'] = term
@@ -161,41 +276,68 @@ for exp in exps:
         else:
             tmp['source'] = 'MPAS-A'
         
-        if term in energy_terms:
-            tmp['type'] = 'energy'
-        elif term in conversion_terms:
-            tmp['type'] = 'conversion'
-        elif term in boundary_terms :
-            tmp['type'] = 'boundary'
-        elif term in residuals_terms:
-            tmp['type'] = 'residual'
-        elif term in budget_diff_terms:
-            tmp['type'] = 'budget'
-        else: 
-            pass
+        tmp['type'] = terms_label(term)
         
         reference = results_ERA[term]
         predicted = tmp['value']
         
-        stats[term]['bias'] = np.mean(reference - predicted)        
-        stats[term]['mse'] = mean_squared_error(reference, predicted)
-        stats[term]['rmse'] = np.sqrt(stats[term]['mse'])
-        stats[term]['mae'] = mean_absolute_error(reference, predicted) 
-        stats[term]['mape'] = mean_absolute_percentage_error(reference, predicted)
-        stats[term]['R2'] = r2_score(reference, predicted)
-            
+        stats_exp[term]['bias'] = np.mean(reference - predicted)        
+        stats_exp[term]['mse'] = mean_squared_error(reference, predicted)
+        stats_exp[term]['rmse'] = np.sqrt(stats_exp[term]['mse'])
+        stats_exp[term]['mae'] = mean_absolute_error(reference, predicted) 
+        stats_exp[term]['mape'] = mean_absolute_percentage_error(reference, predicted)
+        stats_exp[term]['r'] = np.corrcoef(reference, predicted)[0,1]
+
         if i == 0:
             i += 1 
             df_sns = tmp
         else:
             df_sns = pd.concat([df_sns, tmp])
+        
+    # Create and export DataFrame containing the metrics for each experiment
+    df_stats = pd.DataFrame(stats_exp).T
+    df_stats.to_csv('stats/experiments/stats_Lorenz_'+exp+'.csv')
+    # Create a dict containing df for each experiment, where columns are
+    # metrics for each variable (rwos)
+    stats[exp] = df_stats    
             
 df_sns.index = np.arange(0,len(df_sns))
 
+# ----------------------------------
 
 
+# Plot timeseries and Taylor Diagrams for each term
 for term in terms:
     data = df_sns[df_sns['term'] == term]
+    # plot_timeseries(data)
+    # plot_taylor(data)
     
-    plot_timeseries(data)
-    plot_taylor(data)
+# bar_plot_terms_metrics(stats)
+
+# =============================================================================
+# CHoosing best options
+# =============================================================================
+# r_vals, rmse_vals = [], []
+# n = []
+# for r_val, rmse_val  in itertools.product(np.arange(0.5,1,0.1),
+#                                           np.arange(0,0.5,0.1)):
+#     bad_schemes = test_for_rmse_r(stats,r_val,rmse_val)
+#     reproved_schemes = get_list_of_reproveds(bad_schemes)
+#     r_vals.append(r_val)
+#     rmse_vals.append(rmse_val)
+#     n.append(len(reproved_schemes))
+#     print(r_val,rmse_val,len(reproved_schemes))
+    
+# df_reproved = pd.DataFrame(np.array([r_vals,rmse_vals,n]).T, columns=['r','rmse','n'])
+# df_reproved = df_reproved.set_index(['r','rmse'])
+# da_reproved = df_reproved.to_xarray()
+# pc = plt.pcolormesh(da_reproved.r, da_reproved.rmse,da_reproved.n)
+# plt.colorbar(pc)
+
+## Choosen r > 0.8 and rmse < 0.4
+bad_schemes = test_for_rmse_r(stats,0.8,0.4)
+reproved_schemes = get_list_of_reproveds(bad_schemes)
+
+for exp in exps:
+    if exp not in reproved_schemes:
+        print(exp)
