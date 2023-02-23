@@ -9,12 +9,14 @@ import glob
 import argparse
 import f90nml
 import datetime
+import itertools
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 import cmocean.cm as cmo
 import cartopy.crs as ccrs
+import seaborn as sns
 
 import scipy.stats as st
 import skill_metrics as sm
@@ -62,6 +64,15 @@ def get_model_accprec(model_data):
         acc_prec = model_data.uReconstructMeridional[0]*0
     return acc_prec[-1]
 
+def willmot_d_index(observed, modeled):
+    obs_mean = observed.mean()
+    mod_mean = modeled.mean()
+    
+    numerator = np.sum(np.abs(observed - modeled))
+    denominator = np.sum(np.abs(observed - obs_mean)) + np.sum(np.abs(modeled - mod_mean))
+        
+    return  1 - (numerator / denominator)
+
 def plot_taylor(sdevs,crmsds,ccoefs,experiments):
     '''
     Produce the Taylor diagram
@@ -94,6 +105,7 @@ def plot_taylor(sdevs,crmsds,ccoefs,experiments):
                       titleOBS = 'IMERG', styleObs =':',
                       axismax = axismax, alpha = 1)
 
+
 ## Parser options ##
 parser = argparse.ArgumentParser()
 
@@ -118,15 +130,20 @@ times = get_times_nml(namelist,model_data)
 
 first_day = datetime.datetime.strftime(times[0], '%Y-%m-%d')
 last_day = datetime.datetime.strftime(times[-2], '%Y-%m-%d')
-imerg = xr.open_dataset(args.imerg).sel(lat=slice(model_data.latitude[-1],
+imerg = xr.open_dataset(args.imerg).sortby('lat', ascending=False
+                    ).sel(lat=slice(model_data.latitude[-1],
                  model_data.latitude[0]),lon=slice(model_data.longitude[0],
                 model_data.longitude[-1])).sel(time=slice(first_day,last_day))
+                                                   
 print('Using IMERG data from',first_day,'to',last_day)                                             
-imerg_accprec = imerg.precipitationCal.cumsum(dim='time')[-1]
+imerg_accprec = imerg.precipitationCal.cumsum(dim='time')[-1].transpose(
+    'lat', 'lon')
 print('Maximum acc prec:',float(imerg_accprec.max()))
+
 print('\nOpening all data and putting it into a dictionary...')
 data = {}
 data['IMERG'] = imerg_accprec
+
 for bench in benchs:
     
     experiment = get_exp_name(bench)
@@ -140,15 +157,24 @@ for bench in benchs:
     acc_prec_interp = acc_prec.interp(latitude=imerg_accprec.lat,
                                       longitude=imerg_accprec.lon,
                                       method='cubic',assume_sorted=False)
-    interp =  acc_prec_interp.where(acc_prec_interp >=0, 0)
+    interp =  acc_prec_interp.where(acc_prec_interp >=0, 0).transpose(
+        'lat', 'lon')
     
     print('limits for prec data:',float(acc_prec.min()),float(acc_prec.max()))
     print('limits for interp prec data:',float(acc_prec_interp.min()),
           float(acc_prec_interp.max()))
     
+    stats = sm.taylor_statistics(imerg_accprec.values.ravel(),
+                                 interp.values.ravel())
+    
     data[experiment] = {}
     data[experiment]['data'] = acc_prec
     data[experiment]['interp'] = interp
+    data[experiment]['ccoef'] = (stats['ccoef'][1])
+    data[experiment]['crmsd'] = (stats['crmsd'][1])
+    data[experiment]['sdev'] = (stats['sdev'][1])
+    data[experiment]['willmot_d_index'] = willmot_d_index(
+        imerg_accprec.values.ravel(),interp.values.ravel())
 
 # =============================================================================
 # Plot acc prec maps and bias
@@ -262,7 +288,6 @@ plt.close('all')
 fig = plt.figure(figsize=(10, 16))
 gs = gridspec.GridSpec(6, 3)
 
-ccoef, crmsd, sdev = [], [], []
 
 i = 0
 for col in range(3):
@@ -276,13 +301,6 @@ for col in range(3):
         
         reference = imerg_accprec.values.ravel()
         predicted =  data[experiment]['interp'].values.ravel()
-        
-        stats = sm.taylor_statistics(predicted,reference)
-        print('Correlation, RMSE and SDev:',
-              stats['ccoef'][1],(stats['crmsd'][1]),stats['sdev'][1])
-        ccoef.append(stats['ccoef'][1])
-        crmsd.append(stats['crmsd'][1])
-        sdev.append(stats['sdev'][1])
         
         if experiment != 'off_off':
                  
@@ -305,8 +323,13 @@ fig.savefig(fname+'_PDF.png', dpi=500)
 print(fname+'_PDF','saved')
 
 # =============================================================================
-# Plot Taylor Diagrams ##
+# Plot Taylor Diagrams and do Statistics ##
 # =============================================================================
+ccoef = [data[exp]['ccoef'] for exp in data.keys() if exp != 'IMERG']
+crmsd  = [data[exp]['crmsd'] for exp in data.keys() if exp != 'IMERG']
+sdev = [data[exp]['sdev'] for exp in data.keys() if exp != 'IMERG']
+d_index = [
+    data[exp]['willmot_d_index'] for exp in data.keys() if exp != 'IMERG']
 ccoef, crmsd, sdev = np.array(ccoef),np.array(crmsd),np.array(sdev)
 print('plotting taylor diagrams..')
 fig = plt.figure(figsize=(10,10))
@@ -314,3 +337,54 @@ plot_taylor(sdev,crmsd,ccoef,list(data.keys()))
 plt.tight_layout(w_pad=0.1)
 fig.savefig(fname+'_prec-taylor.png', dpi=500)    
 print(fname+'_prec-taylor created!')
+
+
+df_stats = pd.DataFrame(crmsd,
+                       index=[exp for exp in data.keys() if exp != 'IMERG'],
+                       columns=['rmse'])
+df_stats['ccoef'] = ccoef
+df_stats['d_index'] = d_index
+
+
+# Normalize values for comparison
+df_stats_norm = (df_stats-df_stats.min()
+                  )/(df_stats.max()-df_stats.min()) 
+
+for data, title in zip([df_stats, df_stats_norm],
+                       ['stats', 'stats normalised']):
+    for col in data.columns:
+        plt.close('all')
+        f, ax = plt.subplots(figsize=(10, 10))
+        ax.bar(data.index,data[col].values)
+        f.savefig('Figures_48h/stats_prec/'+title+'_'+col+'.png', dpi=500)
+
+rmse_vals = np.arange(0.6,-0.01,-0.05)
+r_vals = np.arange(0.6,1.01,0.05)
+d_vals = np.arange(0.6,1.01,0.05)
+
+for rmse_val, r_val, d_val in itertools.product(rmse_vals, r_vals, d_vals):
+    
+    rmse_val, r_val, d_val = round(rmse_val,2), round(r_val,2), round(d_val,2)
+    
+    rmse_norm = df_stats_norm['rmse']
+    corrcoef_norm = df_stats_norm['ccoef']
+    d_norm = df_stats_norm['d_index']
+    
+    approved_rmse = rmse_norm[rmse_norm <= rmse_val].dropna().index.to_list()
+    approved_r = corrcoef_norm[corrcoef_norm >= r_val].dropna().index.to_list()
+    approved_d = d_norm[d_norm >= d_val].dropna().index.to_list()
+    
+    if len(approved_rmse) > 0 and len(approved_r) > 0 and len(approved_d) > 0:
+    
+        approved = list(approved_rmse)
+        approved.extend(x for x in approved_r if x not in approved)
+        approved.extend(x for x in approved_d if x not in approved)
+        
+    else:
+        
+        approved = []
+    
+    if len(approved) > 0:
+                
+        print('\nrmse:', rmse_val, 'r:', r_val, 'd:', d_val)
+        [print(i) for i in approved]
