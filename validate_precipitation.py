@@ -124,14 +124,13 @@ benchs = glob.glob(args.bench_directory+'/run*')
 model_output = benchs[0]+'/latlon.nc'
 namelist_path = benchs[0]+"/namelist.atmosphere"
 # open data and namelist
-model_data = xr.open_dataset(model_output).sortby('latitude', ascending=False)
+model_data = xr.open_dataset(model_output)
 namelist = f90nml.read(glob.glob(namelist_path)[0])
 times = get_times_nml(namelist,model_data)
 
 first_day = datetime.datetime.strftime(times[0], '%Y-%m-%d')
 last_day = datetime.datetime.strftime(times[-2], '%Y-%m-%d')
-imerg = xr.open_dataset(args.imerg).sortby('lat', ascending=False
-                    ).sel(lat=slice(model_data.latitude[-1],
+imerg = xr.open_dataset(args.imerg).sel(lat=slice(model_data.latitude[-1],
                  model_data.latitude[0]),lon=slice(model_data.longitude[0],
                 model_data.longitude[-1])).sel(time=slice(first_day,last_day))
 print(imerg)                                               
