@@ -356,6 +356,8 @@ for data, title in zip([df_stats, df_stats_norm],
         plt.close('all')
         f, ax = plt.subplots(figsize=(10, 10))
         ax.bar(data.index,data[col].values)
+        plt.xticks(rotation=30, ha='right')
+        plt.tight_layout()
         f.savefig('Figures_48h/stats_prec/'+title+'_'+col+'.png', dpi=500)
 
 rmse_vals = np.arange(0.6,-0.01,-0.05)
