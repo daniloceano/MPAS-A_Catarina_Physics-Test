@@ -19,6 +19,10 @@ from matplotlib.lines import Line2D
 import cartopy.crs as ccrs
 import cartopy
 
+import cmocean.cm as cmo
+
+import seaborn as sns
+
 colors = {'ERA':'k', 'fritsch':'tab:orange','tiedtke':'tab:red',
           'ntiedtke':'tab:purple', 'freitas':'tab:brown','off':'tab:green'}
 
@@ -57,7 +61,7 @@ def make_legend(colors,markers,lines, ax):
                             bbox_to_anchor=(1.11, 0.1))
     return legend1, legend2    
 
-def tracks_one_image(tracks):
+def tracks_one_image(tracks, directory):
     plt.close('all')
     fig = plt.figure(figsize=(15, 12))
     
@@ -93,11 +97,11 @@ def tracks_one_image(tracks):
     ax.add_artist(legend1)
     ax.add_artist(legend2)
     
+    fname = directory+'tracks'
     fig.savefig(fname+'.png', dpi=500)
     print(fname+'.png created!')
-    return fname
     
-def tracks_subplots(tracks):
+def tracks_subplots(tracks, directory):
     plt.close('all')
     fig = plt.figure(figsize=(10, 13))
     gs = gridspec.GridSpec(6, 3)
@@ -141,11 +145,11 @@ def tracks_subplots(tracks):
                             c='gray', label=expname)
             i+=1
             
-    fname2 = fname+'_multipanel'
-    plt.savefig(fname2+'.png', dpi=500)
-    print(fname2+'.png created!')
+    fname = directory+'tracks_multipanel'
+    plt.savefig(fname+'.png', dpi=500)
+    print(fname+'.png created!')
 
-def minimum_slp_and_distance(tracks, fname):
+def minimum_slp_and_distance(tracks, directory):
     print('plotting minimum SLP..')
     plt.close('all')
     fig1 = plt.figure(figsize=(15, 12))
@@ -154,6 +158,8 @@ def minimum_slp_and_distance(tracks, fname):
     ax2 = fig2.add_subplot(1, 1, 1)
     
     stats = {}
+    distances = {}
+    mins = {}
     
     for trackfile in tracks:   
         
@@ -162,12 +168,15 @@ def minimum_slp_and_distance(tracks, fname):
         
         track = pd.read_csv(trackfile, index_col=0)    
         time, min_slp = pd.to_datetime(track.index), track['min']
+        
+        mins[exp] = min_slp
                     
         print('data range:',min_slp.min(),'to',min_slp.max())
         
         if exp == 'ERA5':
             microp, cumulus = 'ERA', 'ERA'
             zorder=100
+            
         else:
             microp, cumulus = exp.split('_')[0], exp.split('_')[1]
             
@@ -175,6 +184,8 @@ def minimum_slp_and_distance(tracks, fname):
             mean_dist = distance.mean()
             std_dist = distance.std()
             stats[exp] = [mean_dist,std_dist]
+            
+            distances[exp] = distance
             
             zorder=1
             
@@ -193,8 +204,11 @@ def minimum_slp_and_distance(tracks, fname):
     df = pd.DataFrame(stats, index=['mean_dist','std']).T
     df.to_csv('stats/distances.csv')
     
-    fname3 = fname+'_min-slp'
-    fname4 = fname+'_distance'
+    df_dist = pd.DataFrame.from_dict(distances)
+    df_min = pd.DataFrame.from_dict(mins)
+    
+    fname3 = directory+'min-slp'
+    fname4 = directory+'distance-timeseries'
     for fname, ax, fig in zip([fname3, fname4], [ax1, ax2], [fig1, fig2]):
         legend1, legend2 = make_legend(colors,markers,lines, ax)
         ax.add_artist(legend1)
@@ -202,13 +216,45 @@ def minimum_slp_and_distance(tracks, fname):
         fig.savefig(fname+'.png', dpi=500)
         print(fname+'.png created!')
     
+    return df_dist, df_min
 
+def bar_plot_distances(df, fname):
+    
+    df_sns = pd.DataFrame(df[df.columns[0]])
+    df_sns = df_sns.rename(columns={df.columns[0]:'values'})
+    df_sns['exp'] = df.columns[0]
+    df_sns['mean'] = df_sns['values'].mean()
+    
+    for col in df.columns[1:]:
+        tmp = pd.DataFrame(df[col])
+        tmp = tmp.rename(columns={col:'values'})
+        tmp['exp'] = col
+        tmp['mean'] = tmp['values'].mean()
+        df_sns = pd.concat([df_sns, tmp])
+    
+    plt.close('all')
+    plt.figure(figsize=(10,8))
+    ax = sns.barplot(data=df_sns, x='exp', y='values',
+                palette='cmo.matter', hue='mean',dodge=False)
+    ax.get_legend().remove()
+    plt.xticks(rotation=30, ha='right')
+    if 'slp' in fname:
+        plt.ylim(975,1005)
+        ax.axhline(df_sns['values'].min(),color='gray',alpha=0.6)
+    else:
+        plt.ylim(round(df_sns['mean'].min()*.9,-1),
+                  round(df_sns['mean'].max()*1.1,-1))
+    
+    plt.savefig(fname, dpi=500)
+    print(fname,'created!')
         
 if __name__ == '__main__':
     
     tracks = glob.glob('tracks_48h/*')
     datacrs = ccrs.PlateCarree()
-    fname = 'FIgures_48h/tracks'
-    # tracks_one_image(tracks)
-    # tracks_subplots(tracks)
-    minimum_slp_and_distance(tracks, fname)
+    directory = 'Figures_48h/tracks/'
+    tracks_one_image(tracks, directory)
+    tracks_subplots(tracks, directory)
+    df_dist, df_min = minimum_slp_and_distance(tracks, directory)
+    bar_plot_distances(df_dist, directory+'barplot-distances.png')
+    bar_plot_distances(df_min, directory+'barplot-min-slp.png')
