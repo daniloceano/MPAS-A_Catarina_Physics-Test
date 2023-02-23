@@ -265,7 +265,7 @@ gl.ylabel_style = {'size': 12, 'color': '#383838'}
 gl.right_labels = None
 gl.top_labels = None
 cf = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,
-                 imerg_accprec.T, cmap=cmo.rain,
+                 imerg_accprec, cmap=cmo.rain,
                  levels=np.arange(0,imerg_accprec.max()+2,2))
 fig.colorbar(cf, ax=ax, fraction=0.03, pad=0.1)
 ax.coastlines(zorder = 1)
