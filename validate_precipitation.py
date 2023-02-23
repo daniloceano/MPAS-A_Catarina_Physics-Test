@@ -134,6 +134,7 @@ imerg = xr.open_dataset(args.imerg).sortby('lat', ascending=False
                     ).sel(lat=slice(model_data.latitude[-1],
                  model_data.latitude[0]),lon=slice(model_data.longitude[0],
                 model_data.longitude[-1])).sel(time=slice(first_day,last_day))
+print(imerg)                                               
                                                    
 print('Using IMERG data from',first_day,'to',last_day)                                             
 imerg_accprec = imerg.precipitationCal.cumsum(dim='time')[-1].transpose(
