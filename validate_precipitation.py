@@ -176,151 +176,151 @@ for bench in benchs:
     data[experiment]['willmot_d_index'] = willmot_d_index(
         imerg_accprec.values.ravel(),interp.values.ravel())
 
-# =============================================================================
-# Plot acc prec maps and bias
-# =============================================================================
-print('\nPlotting maps...')
-plt.close('all')
-fig1 = plt.figure(figsize=(10, 12))
-fig2 = plt.figure(figsize=(10, 12))
-gs1 = gridspec.GridSpec(6, 3)
-gs2 = gridspec.GridSpec(6, 3)
-datacrs = ccrs.PlateCarree()
+# # =============================================================================
+# # Plot acc prec maps and bias
+# # =============================================================================
+# print('\nPlotting maps...')
+# plt.close('all')
+# fig1 = plt.figure(figsize=(10, 12))
+# fig2 = plt.figure(figsize=(10, 12))
+# gs1 = gridspec.GridSpec(6, 3)
+# gs2 = gridspec.GridSpec(6, 3)
+# datacrs = ccrs.PlateCarree()
 
-prec_levels = np.arange(0,425,4)
-bias_levels = np.arange(-700,411,10)
+# prec_levels = np.arange(0,425,4)
+# bias_levels = np.arange(-700,411,10)
 
-i = 0
-for col in range(3):
-    for row in range(6):
+# i = 0
+# for col in range(3):
+#     for row in range(6):
         
-        bench = benchs[i]
-        experiment = get_exp_name(bench)
-        print('\n',experiment)
+#         bench = benchs[i]
+#         experiment = get_exp_name(bench)
+#         print('\n',experiment)
         
-        prec = data[experiment]['data']
-        prec_interp = data[experiment]['interp']
+#         prec = data[experiment]['data']
+#         prec_interp = data[experiment]['interp']
         
-        for fig in [fig1,fig2]:
+#         for fig in [fig1,fig2]:
             
-            ax = fig.add_subplot(gs1[row, col], projection=datacrs,frameon=True)
+#             ax = fig.add_subplot(gs1[row, col], projection=datacrs,frameon=True)
             
-            ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
-            gl = ax.gridlines(draw_labels=True,zorder=2,linestyle='dashed',
-                              alpha=0.8, color='#383838')
-            gl.xlabel_style = {'size': 12, 'color': '#383838'}
-            gl.ylabel_style = {'size': 12, 'color': '#383838'}
-            gl.right_labels = None
-            gl.top_labels = None
-            if row != 5:
-                gl.bottom_labels = None
-            if col != 0:
-                gl.left_labels = None
+#             ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
+#             gl = ax.gridlines(draw_labels=True,zorder=2,linestyle='dashed',
+#                               alpha=0.8, color='#383838')
+#             gl.xlabel_style = {'size': 12, 'color': '#383838'}
+#             gl.ylabel_style = {'size': 12, 'color': '#383838'}
+#             gl.right_labels = None
+#             gl.top_labels = None
+#             if row != 5:
+#                 gl.bottom_labels = None
+#             if col != 0:
+#                 gl.left_labels = None
         
-            ax.text(-50,-19,experiment)
+#             ax.text(-50,-19,experiment)
             
-            if fig == fig1:
-                print('Plotting accumulate prec..')
-                cf1 = ax.contourf(prec.longitude, prec.latitude, prec,
-                                  cmap=cmo.rain, levels=prec_levels)
-                print('prec limits:',float(prec.min()), float(prec.max()))
-            else:
-                print('Plotting bias..')
-                bias = prec_interp-imerg_accprec
-                cf2 = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,bias,
-                                 cmap=cmo.balance_r,
-                                 levels=bias_levels)
-                print('bias limits:',float(bias.min()), float(bias.max()))
-            ax.coastlines(zorder = 1)
-        i+=1
+#             if fig == fig1:
+#                 print('Plotting accumulate prec..')
+#                 cf1 = ax.contourf(prec.longitude, prec.latitude, prec,
+#                                   cmap=cmo.rain, levels=prec_levels)
+#                 print('prec limits:',float(prec.min()), float(prec.max()))
+#             else:
+#                 print('Plotting bias..')
+#                 bias = prec_interp-imerg_accprec
+#                 cf2 = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,bias,
+#                                  cmap=cmo.balance_r,
+#                                  levels=bias_levels)
+#                 print('bias limits:',float(bias.min()), float(bias.max()))
+#             ax.coastlines(zorder = 1)
+#         i+=1
 
-for fig, cf in zip([fig1, fig2], [cf1, cf2]):
-    cb_axes = fig.add_axes([0.85, 0.18, 0.04, 0.6])
-    fig.colorbar(cf, cax=cb_axes, orientation="vertical") 
-    fig.subplots_adjust(wspace=0.1,hspace=0, right=0.8)
+# for fig, cf in zip([fig1, fig2], [cf1, cf2]):
+#     cb_axes = fig.add_axes([0.85, 0.18, 0.04, 0.6])
+#     fig.colorbar(cf, cax=cb_axes, orientation="vertical") 
+#     fig.subplots_adjust(wspace=0.1,hspace=0, right=0.8)
     
 if args.output is not None:
     fname = args.output
 else:
     fname = (args.bench_directory).split('/')[-2].split('.nc')[0]
-fname1 = fname+'_acc_prec'
-fname2 = fname+'_acc_prec_bias'
-fig1.savefig(fname1+'.png', dpi=500)
-fig2.savefig(fname2+'.png', dpi=500)
-print(fname1,'and',fname1,'saved')
+# fname1 = fname+'_acc_prec'
+# fname2 = fname+'_acc_prec_bias'
+# fig1.savefig(fname1+'.png', dpi=500)
+# fig2.savefig(fname2+'.png', dpi=500)
+# print(fname1,'and',fname1,'saved')
 
-# =============================================================================
-# Plot IMERG ac prec
-# =============================================================================
-print('\nPlotting IMERG data..')
-plt.close('all')
-fig = plt.figure(figsize=(10, 10))
-datacrs = ccrs.PlateCarree()
-ax = fig.add_subplot(111, projection=datacrs,frameon=True)
-ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
-gl = ax.gridlines(draw_labels=True,zorder=2,linestyle='dashed',
-                  alpha=0.8, color='#383838')
-gl.xlabel_style = {'size': 12, 'color': '#383838'}
-gl.ylabel_style = {'size': 12, 'color': '#383838'}
-gl.right_labels = None
-gl.top_labels = None
-cf = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,
-                 imerg_accprec, cmap=cmo.rain,
-                 levels=np.arange(0,imerg_accprec.max()+2,2))
-fig.colorbar(cf, ax=ax, fraction=0.03, pad=0.1)
-ax.coastlines(zorder = 1)
+# # =============================================================================
+# # Plot IMERG ac prec
+# # =============================================================================
+# print('\nPlotting IMERG data..')
+# plt.close('all')
+# fig = plt.figure(figsize=(10, 10))
+# datacrs = ccrs.PlateCarree()
+# ax = fig.add_subplot(111, projection=datacrs,frameon=True)
+# ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
+# gl = ax.gridlines(draw_labels=True,zorder=2,linestyle='dashed',
+#                   alpha=0.8, color='#383838')
+# gl.xlabel_style = {'size': 12, 'color': '#383838'}
+# gl.ylabel_style = {'size': 12, 'color': '#383838'}
+# gl.right_labels = None
+# gl.top_labels = None
+# cf = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,
+#                  imerg_accprec, cmap=cmo.rain,
+#                  levels=np.arange(0,imerg_accprec.max()+2,2))
+# fig.colorbar(cf, ax=ax, fraction=0.03, pad=0.1)
+# ax.coastlines(zorder = 1)
 
-imergname = args.imerg.split('/')[-1].split('.nc')[0]
-fig.savefig(imergname+'.png', dpi=500)
-print(imergname,'saved')
+# imergname = args.imerg.split('/')[-1].split('.nc')[0]
+# fig.savefig(imergname+'.png', dpi=500)
+# print(imergname,'saved')
 
-# =============================================================================
-# PDFs
-# =============================================================================
-print('\nPlotting PDFs..')
-nbins = 100
-params_imerg = st.weibull_min.fit(imerg_accprec.values.ravel())
-x_imerg = np.linspace(st.weibull_min.ppf(0.01, *params_imerg),
-                st.weibull_min.ppf(0.99, *params_imerg), nbins)
-pdf_imerg = st.weibull_min.pdf(x_imerg, *params_imerg)
+# # =============================================================================
+# # PDFs
+# # =============================================================================
+# print('\nPlotting PDFs..')
+# nbins = 100
+# params_imerg = st.weibull_min.fit(imerg_accprec.values.ravel())
+# x_imerg = np.linspace(st.weibull_min.ppf(0.01, *params_imerg),
+#                 st.weibull_min.ppf(0.99, *params_imerg), nbins)
+# pdf_imerg = st.weibull_min.pdf(x_imerg, *params_imerg)
 
-plt.close('all')
-fig = plt.figure(figsize=(10, 16))
-gs = gridspec.GridSpec(6, 3)
+# plt.close('all')
+# fig = plt.figure(figsize=(10, 16))
+# gs = gridspec.GridSpec(6, 3)
 
 
-i = 0
-for col in range(3):
-    for row in range(6):
+# i = 0
+# for col in range(3):
+#     for row in range(6):
     
-        ax = fig.add_subplot(gs[row, col], frameon=True)
+#         ax = fig.add_subplot(gs[row, col], frameon=True)
     
-        bench = benchs[i]
-        experiment = get_exp_name(bench)
-        print('\n',experiment)
+#         bench = benchs[i]
+#         experiment = get_exp_name(bench)
+#         print('\n',experiment)
         
-        reference = imerg_accprec.values.ravel()
-        predicted =  data[experiment]['interp'].values.ravel()
+#         reference = imerg_accprec.values.ravel()
+#         predicted =  data[experiment]['interp'].values.ravel()
         
-        if experiment != 'off_off':
+#         if experiment != 'off_off':
                  
-            ax.hist(reference, bins=nbins, color='k', lw=1, alpha=0.3,
-                    density=True, histtype='step',label='IMERG', zorder=1) 
+#             ax.hist(reference, bins=nbins, color='k', lw=1, alpha=0.3,
+#                     density=True, histtype='step',label='IMERG', zorder=1) 
             
-            ax.hist(predicted, bins=nbins, color='tab:red',  lw=1, alpha=0.3,
-                    density=True, histtype='step', label=experiment, zorder=100)
+#             ax.hist(predicted, bins=nbins, color='tab:red',  lw=1, alpha=0.3,
+#                     density=True, histtype='step', label=experiment, zorder=100)
 
-            # ax.set_xscale('log')
-            ax.set_yscale('log')  
-            ax.text
-            ax.text(50, len(reference)*.1,experiment)
+#             # ax.set_xscale('log')
+#             ax.set_yscale('log')  
+#             ax.text
+#             ax.text(50, len(reference)*.1,experiment)
             
-            i+=1
+#             i+=1
             
             
-fig.subplots_adjust(hspace=0.25)
-fig.savefig(fname+'_PDF.png', dpi=500)    
-print(fname+'_PDF','saved')
+# fig.subplots_adjust(hspace=0.25)
+# fig.savefig(fname+'_PDF.png', dpi=500)    
+# print(fname+'_PDF','saved')
 
 # =============================================================================
 # Plot Taylor Diagrams and do Statistics ##
@@ -384,7 +384,7 @@ for rmse_val, r_val, d_val in itertools.product(rmse_vals, r_vals, d_vals):
         
         approved = []
     
-    if len(approved) > 0:
+    if len(approved) > 0 and len(approved) <= 4:
                 
         print('\nrmse:', rmse_val, 'r:', r_val, 'd:', d_val)
         [print(i) for i in approved]
