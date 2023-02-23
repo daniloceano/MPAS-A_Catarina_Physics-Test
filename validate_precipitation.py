@@ -124,7 +124,7 @@ benchs = glob.glob(args.bench_directory+'/run*')
 model_output = benchs[0]+'/latlon.nc'
 namelist_path = benchs[0]+"/namelist.atmosphere"
 # open data and namelist
-model_data = xr.open_dataset(model_output).sortby('lat', ascending=False)
+model_data = xr.open_dataset(model_output).sortby('latitude', ascending=False)
 namelist = f90nml.read(glob.glob(namelist_path)[0])
 times = get_times_nml(namelist,model_data)
 
