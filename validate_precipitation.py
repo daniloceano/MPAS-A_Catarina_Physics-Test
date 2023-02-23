@@ -136,8 +136,7 @@ imerg = xr.open_dataset(args.imerg).sortby('lat', ascending=False
                 model_data.longitude[-1])).sel(time=slice(first_day,last_day))
                                                    
 print('Using IMERG data from',first_day,'to',last_day)                                             
-imerg_accprec = imerg.precipitationCal.cumsum(dim='time')[-1].transpose(
-    'lat', 'lon')
+imerg_accprec = imerg.precipitationCal.cumsum(dim='time')[-1]
 print('Maximum acc prec:',float(imerg_accprec.max()))
 
 print('\nOpening all data and putting it into a dictionary...')
@@ -157,8 +156,7 @@ for bench in benchs:
     acc_prec_interp = acc_prec.interp(latitude=imerg_accprec.lat,
                                       longitude=imerg_accprec.lon,
                                       method='cubic',assume_sorted=False)
-    interp =  acc_prec_interp.where(acc_prec_interp >=0, 0).transpose(
-        'lat', 'lon')
+    interp =  acc_prec_interp.where(acc_prec_interp >=0, 0)
     
     print('limits for prec data:',float(acc_prec.min()),float(acc_prec.max()))
     print('limits for interp prec data:',float(acc_prec_interp.min()),
