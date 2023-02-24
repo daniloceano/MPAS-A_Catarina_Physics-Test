@@ -152,7 +152,7 @@ for bench in benchs:
     surface_miximg_ratio = model_data.q2 * units('kg/kg')
     slp = pressure_to_mslp(surface_pressure, surface_hgt, surface_t,
                          surface_miximg_ratio)/100
-    slp = slp.metpy.dequantify().where(model_data['xland'] == 2, 9999)[0].plot()
+    slp = slp.metpy.dequantify().where(model_data['xland'] == 2,9999)
     
     # slp = pressure_to_slp(pressure_dask.compute(), z.compute(), zlevs)
     
