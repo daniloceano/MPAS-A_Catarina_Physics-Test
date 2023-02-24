@@ -19,7 +19,6 @@ from metpy.units import units
 
 from wrf import interplevel
 
-from metpy import units
 from metpy.constants import g
 from metpy.constants import Rd
 from metpy.calc import density
@@ -146,11 +145,11 @@ for bench in benchs:
     print('computing slp...')
     model_data  = open_dataset(bench, times=times)
     
-    surface_pressure = model_data['surface_pressure'] * units.units.Pa
-    z0 = model_data['zgrid'].isel(nVertLevelsP1=0) * units.units.m
+    surface_pressure = model_data['surface_pressure'] * units.Pa
+    z0 = model_data['zgrid'].isel(nVertLevelsP1=0) * units.m
     surface_hgt = height_to_geopotential(z0)/g
-    surface_t = model_data.t2m * units.units.K
-    surface_miximg_ratio = model_data.q2 * units.units('kg/kg')
+    surface_t = model_data.t2m * units.K
+    surface_miximg_ratio = model_data.q2 * units('kg/kg')
     slp = pressure_to_mslp(surface_pressure, surface_hgt, surface_t,
                          surface_miximg_ratio)/100
     
