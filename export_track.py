@@ -19,9 +19,11 @@ from metpy.units import units
 
 from wrf import interplevel
 
-import dask
-import dask.array as da
-import dask.distributed
+from metpy import units
+from metpy.constants import g
+from metpy.constants import Rd
+from metpy.calc import density
+from metpy.calc import height_to_geopotential
 
 from geopy.distance import geodesic
 
@@ -50,11 +52,10 @@ def get_times_nml(namelist,model_data):
     times = pd.date_range(start_date,finish_date,periods=len(model_data.Time)+1)[1:]
     return times
 
-@dask.delayed
-def open_dataset_with_dask(bench, times=None):
-    data =  xr.open_dataset(bench+'/latlon.nc', chunks={'time': 10}
-                ).sortby('latitude', ascending=False
-                ).sel(latitude=lat_domain,longitude=lon_domain)
+def open_dataset(bench, times=None):
+    data =  xr.open_dataset(bench+'/latlon.nc').sortby(
+        'latitude', ascending=False).sel(
+            latitude=lat_domain,longitude=lon_domain)
     if times:
         data = data.assign_coords({"Time":times})
     return data
@@ -63,6 +64,14 @@ def pressure_to_slp(pressure, z, zlevs):
     pres_height = interplevel(pressure, z[:,:-1], zlevs)
     slp = pres_height.isel(level=1)
     return slp
+
+def pressure_to_mslp(surface_pressure, surface_hgt, surface_t,
+                     surface_miximg_ratio):
+    zsurf = ((Rd*surface_t/g
+              )*np.log(surface_pressure.metpy.dequantify()/100000.0)
+             ).squeeze()
+    rho = density(surface_pressure, surface_t, surface_miximg_ratio)
+    return surface_pressure - (rho*g*zsurf)/100.0
 
 def get_track(slp, TimeIndexer):
     min_var, times = [], []
@@ -107,7 +116,7 @@ model_output = benchs[0]+'/latlon.nc'
 namelist_path = benchs[0]+"/namelist.atmosphere"
 
 # open data and namelist
-model_data = open_dataset_with_dask(benchs[0])
+model_data = open_dataset(benchs[0])
 namelist = f90nml.read(glob.glob(namelist_path)[0])
 times = get_times_nml(namelist,model_data.compute()).tolist()
 first_day = datetime.datetime.strftime(times[0], '%Y-%m-%d %HZ')
@@ -135,9 +144,17 @@ for bench in benchs:
     print('\n',experiment)
     
     print('computing slp...')
-    model_data  = open_dataset_with_dask(bench, times=times)
-    pressure_dask = model_data['pressure']/100
-    slp = pressure_to_slp(pressure_dask.compute(), z.compute(), zlevs)
+    model_data  = open_dataset(bench, times=times)
+    
+    surface_pressure = model_data['surface_pressure'] * units.units.Pa
+    z0 = model_data['zgrid'].isel(nVertLevelsP1=0) * units.units.m
+    surface_hgt = height_to_geopotential(z0)/g
+    surface_t = model_data.t2m * units.units.K
+    surface_miximg_ratio = model_data.q2 * units.units('kg/kg')
+    slp = pressure_to_mslp(surface_pressure, surface_hgt, surface_t,
+                         surface_miximg_ratio)/100
+    
+    # slp = pressure_to_slp(pressure_dask.compute(), z.compute(), zlevs)
     
     print('getting track..')
     track = get_track(slp, 'Time')
