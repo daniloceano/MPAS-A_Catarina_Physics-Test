@@ -72,15 +72,21 @@ def surface_pressure_to_mslp(surface_pressure,
     mslp = (surface_pressure) * _
     return mslp
 
-
-
 def get_track(slp, TimeIndexer):
     min_var, times = [], []
     lats, lons = [], []
+    slp = slp.sortby('latitude', ascending=True
+                     ).sortby('longitude', ascending=True)
     for t in slp[TimeIndexer]:
         datestr = pd.to_datetime(t.values)
         times.append(str(datestr))
-        ivar = slp.sel({TimeIndexer:t})
+        
+        if t == slp[TimeIndexer][0]:
+            ivar = slp.sel({TimeIndexer:t})
+        else:
+            ivar = slp.sel({TimeIndexer:t}
+                           ).sel(latitude=slice(lats[-1]-7.55,lats[-1]+7.5)
+                           ).sel(longitude=slice(lons[-1]-7.5,lons[-1]+7.5))
         
         varmin = ivar.min()
         min_var.append(float(varmin))
@@ -123,12 +129,6 @@ times = get_times_nml(namelist,model_data.compute()).tolist()
 first_day = datetime.datetime.strftime(times[0], '%Y-%m-%d %HZ')
 last_day = datetime.datetime.strftime(times[-1], '%Y-%m-%d %HZ')                      
 print('Analysis is from',first_day,'to',last_day)  
-
-# For interpolating pressure from height to isobaric
-z = model_data.zgrid.expand_dims({'Time':times})
-zmax = float(z.compute().max())
-dz = 100
-zlevs = np.arange(0, zmax, dz) * units.m
 
 print('\nOpening all data and putting it into a dictionary...')
 mslp = xr.open_dataset(args.ERA5, engine='cfgrib',
