@@ -21,8 +21,7 @@ from wrf import interplevel
 
 from metpy.constants import g
 from metpy.constants import Rd
-from metpy.calc import density
-from metpy.calc import height_to_geopotential
+from metpy.calc import virtual_temperature
 
 from geopy.distance import geodesic
 
@@ -64,13 +63,16 @@ def pressure_to_slp(pressure, z, zlevs):
     slp = pres_height.isel(level=1)
     return slp
 
-def pressure_to_mslp(surface_pressure, surface_hgt, surface_t,
-                     surface_miximg_ratio):
-    zsurf = ((Rd*surface_t/g
-              )*np.log(surface_pressure.metpy.dequantify()/100000.0)
-             ).squeeze()
-    rho = density(surface_pressure, surface_t, surface_miximg_ratio)
-    return surface_pressure - (rho*g*zsurf)/100.0
+
+def surface_pressure_to_mslp(surface_pressure,
+                             mean_virtual_temperature, surface_height):
+    a = Rd / g
+    _ = surface_height / (a * mean_virtual_temperature)
+    _ = np.exp(_.metpy.dequantify())
+    mslp = (surface_pressure) * _
+    return mslp
+
+
 
 def get_track(slp, TimeIndexer):
     min_var, times = [], []
@@ -146,15 +148,16 @@ for bench in benchs:
     model_data  = open_dataset(bench, times=times)
     
     surface_pressure = model_data['surface_pressure'] * units.Pa
-    z0 = model_data['zgrid'].isel(nVertLevelsP1=0) * units.m
-    surface_hgt = height_to_geopotential(z0)/g
+    surface_height = model_data['zgrid'].isel(nVertLevelsP1=0) * units.m
     surface_t = model_data.t2m * units.K
     surface_miximg_ratio = model_data.q2 * units('kg/kg')
-    slp = pressure_to_mslp(surface_pressure, surface_hgt, surface_t,
-                         surface_miximg_ratio)/100
-    slp = slp.metpy.dequantify().where(model_data['xland'] == 2,9999)
+    mean_virtual_temperature = virtual_temperature(surface_t,
+                                        surface_miximg_ratio).mean(dim='Time')
     
-    # slp = pressure_to_slp(pressure_dask.compute(), z.compute(), zlevs)
+    slp = surface_pressure_to_mslp(surface_pressure,
+                                 mean_virtual_temperature, surface_height)
+    
+    slp = slp.metpy.convert_units('hPa')
     
     print('getting track..')
     track = get_track(slp, 'Time')
