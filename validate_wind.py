@@ -28,22 +28,41 @@ import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from metpy.calc import wind_speed
 
+class BenchData:
+    
+    def __init__(self, path):
+        self.bench = path
+        self.data = xr.open_dataset(path+'/latlon.nc').chunk({"Time": -1})
+        self.data = self.data.assign_coords({"Time":times})
+        
+
+    def get_exp_name(self):
+        expname = self.bench.split('/')[-1].split('run.')[-1]
+        microp = expname.split('.')[0].split('_')[-1]
+        cumulus = expname.split('.')[-1].split('_')[-1] 
+        return microp+'_'+cumulus
+        
+def interpolate_mpas_data(variable_data, target):
+    return variable_data.rename({'latitude':'lat','longitude':'lon'}
+            ).interp(lat=target.lat,lon=target.lon,method='cubic',
+                     assume_sorted=False)        
+
 def convert_lon(df,LonIndexer):
     df.coords[LonIndexer] = (df.coords[LonIndexer] + 180) % 360 - 180
     df = df.sortby(df[LonIndexer])
     return df
 
 def anim(path,pattern):
-    filenames = glob.glob(path+pattern)
+    filenames = glob.glob(path+pattern+'*')
     ff=[]
     for i in range(len(filenames)):
-    	ff.append(int(filenames[i].split('/')[-1].split('.')[0]))
+    	ff.append(filenames[i].split('/')[-1].split('.')[0])
     
-    df = sorted(ff,key=int)
+    df = sorted(ff,key=str)
     
-    filenames =[]
-    for i in range(len(df)):
-    	filenames.append(path+str(df[i])+'.png')
+    # filenames =[]
+    # for i in range(len(df)):
+    # 	filenames.append(path+str(df[i])+'.png')
     
     with imageio.get_writer(path+'/wind.mp4',fps=5) as writer:
         for filename in filenames:
@@ -66,11 +85,6 @@ def get_times_nml(namelist,model_data):
     times = pd.date_range(start_date,finish_date,periods=len(model_data.Time)+1)[0:-1]
     return times
 
-def get_exp_name(bench):
-    expname = bench.split('/')[-1].split('run.')[-1]
-    microp = expname.split('.')[0].split('_')[-1]
-    cumulus = expname.split('.')[-1].split('_')[-1] 
-    return microp+'_'+cumulus
 
 quickfile = '/home/daniloceano/Documents/MPAS/MPAS-BR/met_data/QUICKSCAT/Catarina_20040321-20040323_v11l30flk.nc'
 
@@ -97,63 +111,47 @@ da_quickscat = convert_lon(xr.open_dataset(quickfile),'lon').sel(
                     lat=slice(model_data.latitude[-1],model_data.latitude[0]),
                     lon=slice(model_data.longitude[0],model_data.longitude[-1])
                     ).sel(time=slice(first_day,last_day))
-print(da_quickscat)                                               
-u_quickscat = da_quickscat.uwnd
-v_quickscat = da_quickscat.vwnd  
-windspeed_quickscat = wind_speed(u_quickscat,v_quickscat)                                          
+                                     
 
 print('\nOpening all data and putting it into a dictionary...')
+benchmarks = [BenchData(bench) for bench in benchs]
 data = {}
-for bench in benchs:
-    
-    experiment = get_exp_name(bench)
-    print('\n',experiment)
-    
-    model_data = xr.open_dataset(bench+'/latlon.nc').chunk({"Time": -1})
-    model_data = model_data.assign_coords({"Time":times})
 
-
-    u = model_data.u10
-    u_interp = u.rename({'longitude':'lon','latitude':'lat'}).sel(
-        Time=times[0:-1:6]).interp(lat=da_quickscat.lat, lon=da_quickscat.lon,
-                                      method='cubic', assume_sorted=False)
-    stats_u = sm.taylor_statistics(u_quickscat.values.ravel(),
-                                  u_interp.values.ravel())
+for benchmark in benchmarks:
+    exp_name = benchmark.get_exp_name()
+    print('\n',exp_name)
+    data[exp_name] = {}
+    
+    for model_var, quickscat_var in zip(['u10','v10','windspeed'],
+                                        ['uwnd','vwnd','windspeed']):
         
-    v = model_data.v10
-    v_interp = v.rename({'longitude':'lon','latitude':'lat'}).sel(
-        Time=times[0:-1:6]).interp(lat=da_quickscat.lat, lon=da_quickscat.lon,
-                                  method='cubic', assume_sorted=False)
-    stats_v = sm.taylor_statistics(v_quickscat.values.ravel(),
-                                  v_interp.values.ravel())
+        data[exp_name][model_var] = {}
+        
+        if model_var == 'windspeed':
+            variable_experiment_data = wind_speed(benchmark.data['u10'],
+                                               benchmark.data['v10'])
+            reference_data = wind_speed(da_quickscat['uwnd'],
+                                        da_quickscat['vwnd'])  
+            
+            
+        else:
+            variable_experiment_data = benchmark.data[model_var]
+            reference_data = da_quickscat[quickscat_var]
+            
+        interpoled_data = interpolate_mpas_data(variable_experiment_data.compute(),
+                                                    reference_data)
+        
+        data[exp_name][model_var]['data'] = variable_experiment_data
+        data[exp_name][model_var]['interpoled_data'] = interpoled_data
+
+        resampled_data = interpoled_data.sel(Time=reference_data.time)
+
+        statistical_metrics = sm.taylor_statistics(
+            resampled_data.values.ravel(), reference_data.values.ravel())
     
-    windspeed = wind_speed(u,v)
-    windspeed_interp = wind_speed(u_interp,v_interp)
-    stats_ws = sm.taylor_statistics(windspeed_quickscat.values.ravel(),
-                                  windspeed_interp.values.ravel())
+        data[exp_name][model_var].update({metric: statistical_metrics[metric][1] for metric in statistical_metrics.keys()})
     
-    print('limits for data:',round(float(windspeed.min()),2),
-          round(float(windspeed.max()),2))
-    print('limits for interp data:',round(float(windspeed_interp.min()),2),
-          round(float(windspeed_interp.max()),2))
-    
-    data[experiment] = {}
-    data[experiment]['u'] = u
-    data[experiment]['v'] = v
-    data[experiment]['windspeed'] = windspeed
-    
-    data[experiment]['ccoef_u'] = (stats_u['ccoef'][1])
-    data[experiment]['crmsd_u'] = (stats_u['crmsd'][1])
-    data[experiment]['sdev_u'] = (stats_u['sdev'][1])
-    
-    data[experiment]['ccoef_v'] = (stats_v['ccoef'][1])
-    data[experiment]['crmsd_v'] = (stats_v['crmsd'][1])
-    data[experiment]['sdev_v'] = (stats_v['sdev'][1])
-    
-    data[experiment]['ccoef_ws'] = (stats_ws['ccoef'][1])
-    data[experiment]['crmsd_ws'] = (stats_ws['crmsd'][1])
-    data[experiment]['sdev_ws'] = (stats_ws['sdev'][1])
-    
+
 # =============================================================================
 # Make gif
 # =============================================================================
@@ -161,6 +159,7 @@ print('\nPlotting maps...')
 datacrs = ccrs.PlateCarree()
 
 levels = np.arange(0,30,2)
+skip = (slice(None, None, 2), slice(None, None, 2))
 
 for t in times:
     plt.close('all')
@@ -170,38 +169,40 @@ for t in times:
     i = 0
     for col in range(3):
         for row in range(6):
+            bench = benchs[i]
+            benchmark_data = BenchData(bench)
+            experiment = benchmark_data.get_exp_name()
             
-            try:
-                bench = benchs[i]
-                experiment = get_exp_name(bench)
-                
-                u = data[experiment]['u'].sel(Time=t)
-                v = data[experiment]['v'].sel(Time=t)
-                windspeed = data[experiment]['windspeed'].sel(Time=t)
-                
-                    
-                ax = fig.add_subplot(gs[row, col], projection=datacrs,frameon=True)
-                
-                ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
-                gl = ax.gridlines(draw_labels=True,zorder=2,linestyle='dashed',
-                                  alpha=0.8, color='#383838')
-                gl.xlabel_style = {'size': 12, 'color': '#383838'}
-                gl.ylabel_style = {'size': 12, 'color': '#383838'}
-                gl.right_labels = None
-                gl.top_labels = None
-                if row != 5:
-                    gl.bottom_labels = None
-                if col != 0:
-                    gl.left_labels = None
+            u = data[experiment]['u10']['data'].sel(Time=t)
+            v = data[experiment]['v10']['data'].sel(Time=t)
+            windspeed = data[experiment]['windspeed']['data'].sel(Time=t)
             
-                ax.text(-50,-19,experiment)
                 
-                cf = ax.contourf(windspeed.longitude, windspeed.latitude, windspeed,
-                                  cmap='rainbow', levels=levels)
-                
-                ax.coastlines(zorder = 1)
-            except:
-                pass
+            ax = fig.add_subplot(gs[row, col], projection=datacrs,frameon=True)
+            
+            ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
+            gl = ax.gridlines(draw_labels=True,zorder=2,linestyle='dashed',
+                              alpha=0.8, color='#383838')
+            gl.xlabel_style = {'size': 12, 'color': '#383838'}
+            gl.ylabel_style = {'size': 12, 'color': '#383838'}
+            gl.right_labels = None
+            gl.top_labels = None
+            if row != 5:
+                gl.bottom_labels = None
+            if col != 0:
+                gl.left_labels = None
+        
+            ax.text(-50,-19,experiment)
+            
+            cf = ax.contourf(windspeed.longitude, windspeed.latitude, windspeed,
+                              cmap='rainbow', levels=levels)
+        
+            # ax.quiver(u.longitude[::20], u.latitude[::20],
+            #           u[::20,::20], v[::20,::20], width=0.025,headaxislength=3.5)
+            ax.streamplot(u.longitude[::20].values, u.latitude[::20].values,
+                          u[::20,::20].values, v[::20,::20].values, color='k')
+            
+            ax.coastlines(zorder = 1)
         i += 1
     
     cb_axes = fig.add_axes([0.85, 0.18, 0.04, 0.6])
@@ -220,4 +221,4 @@ for t in times:
     fig.savefig(fname, dpi=500)
     print(fname,'saved')
     
-    anim('./Figures_48h/','wind-test')
+    anim('./Figures_48h/wind/','wind-test')
