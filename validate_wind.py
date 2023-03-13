@@ -86,14 +86,21 @@ def get_times_nml(namelist,model_data):
     return times
 
 
-quickfile = '/home/daniloceano/Documents/MPAS/MPAS-BR/met_data/QUICKSCAT/Catarina_20040321-20040323_v11l30flk.nc'
+## Parser options ##
+parser = argparse.ArgumentParser()
 
-benchdata = '/home/daniloceano/Documents/MPAS/MPAS-BR/benchmarks/Catarina_physics-test/Catarina_250-8km.microp_scheme.convection_scheme'
+parser.add_argument('-bdir','--bench_directory', type=str, required=True,
+                        help='''path to benchmark directory''')
+parser.add_argument('-q','--quickscat', type=str, default=None, required=True,
+                        help='''path to QUICKSCAT data''')
+parser.add_argument('-o','--output', type=str, default=None,
+                        help='''output name to append file''')
 
+args = parser.parse_args()
 
 ## Start the code ##
 # benchs = glob.glob(args.bench_directory+'/run*')
-benchs = glob.glob(benchdata+'/run*')
+benchs = glob.glob(args.bench+'/run*')
 # Dummy for getting model times
 model_output = benchs[0]+'/latlon.nc'
 namelist_path = benchs[0]+"/namelist.atmosphere"
@@ -107,7 +114,7 @@ last_day = datetime.datetime.strftime(times[-2], '%Y-%m-%d')
 # da_quickscat = xr.open_dataset(args.qs).sel(lat=slice(model_data.latitude[-1],
 #                  model_data.latitude[0]),lon=slice(model_data.longitude[0],
 #                 model_data.longitude[-1])).sel(time=slice(first_day,last_day))
-da_quickscat = convert_lon(xr.open_dataset(quickfile),'lon').sel(
+da_quickscat = convert_lon(xr.open_dataset(args.quickscat),'lon').sel(
                     lat=slice(model_data.latitude[-1],model_data.latitude[0]),
                     lon=slice(model_data.longitude[0],model_data.longitude[-1])
                     ).sel(time=slice(first_day,last_day))
