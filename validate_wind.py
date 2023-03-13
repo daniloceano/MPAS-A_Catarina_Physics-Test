@@ -100,7 +100,7 @@ args = parser.parse_args()
 
 ## Start the code ##
 # benchs = glob.glob(args.bench_directory+'/run*')
-benchs = glob.glob(args.bench+'/run*')
+benchs = glob.glob(args.bdir+'/run*')
 # Dummy for getting model times
 model_output = benchs[0]+'/latlon.nc'
 namelist_path = benchs[0]+"/namelist.atmosphere"
