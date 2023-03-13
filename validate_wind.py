@@ -30,7 +30,7 @@ from metpy.calc import wind_speed
 
 class BenchData:
     
-    def __init__(self, path):
+    def __init__(self, path, times):
         self.bench = path
         self.data = xr.open_dataset(path+'/latlon.nc').chunk({"Time": -1})
         self.data = self.data.assign_coords({"Time":times})
@@ -85,6 +85,37 @@ def get_times_nml(namelist,model_data):
     times = pd.date_range(start_date,finish_date,periods=len(model_data.Time)+1)[0:-1]
     return times
 
+def plot_taylor(sdevs,crmsds,ccoefs,experiments):
+    '''
+    Produce the Taylor diagram
+    Label the points and change the axis options for SDEV, CRMSD, and CCOEF.
+    Increase the upper limit for the SDEV axis and rotate the CRMSD contour 
+    labels (counter-clockwise from x-axis). Exchange color and line style
+    choices for SDEV, CRMSD, and CCOEFF variables to show effect. Increase
+    the line width of all lines.
+    For an exhaustive list of options to customize your diagram, 
+    please call the function at a Python command line:
+    >> taylor_diagram
+    '''
+    # Set the figure properties (optional)
+    rcParams.update({'font.size': 14}) # font size of axes text
+    STDmax = round(np.amax(sdevs))
+    RMSmax = round(np.amax(crmsds))
+    tickRMS = np.linspace(0,round(RMSmax*1.2,1),6)
+    axismax = round(STDmax*1.2,1)
+    sm.taylor_diagram(sdevs,crmsds,ccoefs,
+                      markerLabelColor = 'b', 
+                      markerLabel = experiments,
+                      markerColor = 'r', markerLegend = 'on', markerSize = 15, 
+                      tickRMS = tickRMS, titleRMS = 'off', widthRMS = 2.0,
+                      colRMS = '#728B92', styleRMS = '--',  
+                      widthSTD = 2, styleSTD = '--', colSTD = '#8A8A8A',
+                      titleSTD = 'on',
+                      colCOR = 'k', styleCOR = '-',
+                      widthCOR = 1.0, titleCOR = 'off',
+                      colObs = 'k', markerObs = '^',
+                      titleOBS = 'IMERG', styleObs =':',
+                      axismax = axismax, alpha = 1)
 
 ## Parser options ##
 parser = argparse.ArgumentParser()
@@ -121,7 +152,7 @@ da_quickscat = convert_lon(xr.open_dataset(args.quickscat),'lon').sel(
                                      
 
 print('\nOpening all data and putting it into a dictionary...')
-benchmarks = [BenchData(bench) for bench in benchs]
+benchmarks = [BenchData(bench, times) for bench in benchs]
 data = {}
 
 for benchmark in benchmarks:
@@ -159,73 +190,147 @@ for benchmark in benchmarks:
         data[exp_name][model_var].update({metric: statistical_metrics[metric][1] for metric in statistical_metrics.keys()})
     
 
-# =============================================================================
-# Make gif
-# =============================================================================
-print('\nPlotting maps...')
-datacrs = ccrs.PlateCarree()
+# # =============================================================================
+# # Make gif
+# # =============================================================================
+# print('\nPlotting maps...')
+# datacrs = ccrs.PlateCarree()
 
-levels = np.arange(0,30,2)
-skip = (slice(None, None, 2), slice(None, None, 2))
+# levels = np.arange(0,30,2)
+# skip = (slice(None, None, 2), slice(None, None, 2))
 
-for t in times:
-    plt.close('all')
-    fig = plt.figure(figsize=(10, 12))
-    gs = gridspec.GridSpec(6, 3)
-    print('\n',t)
-    i = 0
-    for col in range(3):
-        for row in range(6):
-            bench = benchs[i]
-            benchmark_data = BenchData(bench)
-            experiment = benchmark_data.get_exp_name()
+# for t in times:
+#     plt.close('all')
+#     fig = plt.figure(figsize=(10, 12))
+#     gs = gridspec.GridSpec(6, 3)
+#     print('\n',t)
+#     i = 0
+#     for col in range(3):
+#         for row in range(6):
+#             bench = benchs[i]
+#             benchmark_data = BenchData(bench)
+#             experiment = benchmark_data.get_exp_name()
             
-            u = data[experiment]['u10']['data'].sel(Time=t)
-            v = data[experiment]['v10']['data'].sel(Time=t)
-            windspeed = data[experiment]['windspeed']['data'].sel(Time=t)
+#             u = data[experiment]['u10']['data'].sel(Time=t)
+#             v = data[experiment]['v10']['data'].sel(Time=t)
+#             windspeed = data[experiment]['windspeed']['data'].sel(Time=t)
             
                 
-            ax = fig.add_subplot(gs[row, col], projection=datacrs,frameon=True)
+#             ax = fig.add_subplot(gs[row, col], projection=datacrs,frameon=True)
             
-            ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
-            gl = ax.gridlines(draw_labels=True,zorder=2,linestyle='dashed',
-                              alpha=0.8, color='#383838')
-            gl.xlabel_style = {'size': 12, 'color': '#383838'}
-            gl.ylabel_style = {'size': 12, 'color': '#383838'}
-            gl.right_labels = None
-            gl.top_labels = None
-            if row != 5:
-                gl.bottom_labels = None
-            if col != 0:
-                gl.left_labels = None
+#             ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
+#             gl = ax.gridlines(draw_labels=True,zorder=2,linestyle='dashed',
+#                               alpha=0.8, color='#383838')
+#             gl.xlabel_style = {'size': 12, 'color': '#383838'}
+#             gl.ylabel_style = {'size': 12, 'color': '#383838'}
+#             gl.right_labels = None
+#             gl.top_labels = None
+#             if row != 5:
+#                 gl.bottom_labels = None
+#             if col != 0:
+#                 gl.left_labels = None
         
-            ax.text(-50,-19,experiment)
+#             ax.text(-50,-19,experiment)
             
-            cf = ax.contourf(windspeed.longitude, windspeed.latitude, windspeed,
-                              cmap='rainbow', levels=levels)
+#             cf = ax.contourf(windspeed.longitude, windspeed.latitude, windspeed,
+#                               cmap='rainbow', levels=levels)
         
-            # ax.quiver(u.longitude[::20], u.latitude[::20],
-            #           u[::20,::20], v[::20,::20], width=0.025,headaxislength=3.5)
-            ax.streamplot(u.longitude[::20].values, u.latitude[::20].values,
-                          u[::20,::20].values, v[::20,::20].values, color='k')
+#             # ax.quiver(u.longitude[::20], u.latitude[::20],
+#             #           u[::20,::20], v[::20,::20], width=0.025,headaxislength=3.5)
+#             ax.streamplot(u.longitude[::20].values, u.latitude[::20].values,
+#                           u[::20,::20].values, v[::20,::20].values, color='k')
             
-            ax.coastlines(zorder = 1)
-        i += 1
+#             ax.coastlines(zorder = 1)
+#         i += 1
     
-    cb_axes = fig.add_axes([0.85, 0.18, 0.04, 0.6])
-    fig.colorbar(cf, cax=cb_axes, orientation="vertical") 
-    fig.subplots_adjust(wspace=0.1,hspace=0, right=0.8)
+#     cb_axes = fig.add_axes([0.85, 0.18, 0.04, 0.6])
+#     fig.colorbar(cf, cax=cb_axes, orientation="vertical") 
+#     fig.subplots_adjust(wspace=0.1,hspace=0, right=0.8)
     
-    # if 'args.output is not None:
-    #     fname = args.output
-    # else:
-    #     fname = (args.'bench_directory).split('/')[-2].split('.nc')[0]
-    # fname1 = fname+'_wind-maps'
+#     if args.output is not None:
+#         fname = args.output
+#     else:
+#         fname = (args.bench_directory).split('/')[-2].split('.nc')[0]
+#     fname1 = fname+'_wind-maps'
     
-    time_string = t.strftime("%d-%HZ")
-    fname = './Figures_48h/wind/wind-test'+'_'+time_string+'.png'
+#     time_string = t.strftime("%d-%HZ")
+#     fname = './Figures_48h/wind/wind-test'+'_'+time_string+'.png'
     
-    fig.savefig(fname, dpi=500)
-    print(fname,'saved')
+#     fig.savefig(fname, dpi=500)
+#     print(fname,'saved')
     
-    anim('./Figures_48h/wind/','wind-test')
+#     anim('./Figures_48h/wind/','wind-test')
+    
+# =============================================================================
+# Plot Taylor Diagrams and do Statistics ##
+# =============================================================================
+
+for var in ['u10','v10','windspeed']:
+    
+    print('\n-------------------------------')
+    print(var)
+    
+    if args.output is not None:
+        fname = args.output
+    else:
+        fname = (args.bench_directory).split('/')[-2].split('.nc')[0]
+    fname += '_'+var
+    
+    ccoef = [data[exp][var]['ccoef'] for exp in data.keys() if exp != 'IMERG']
+    crmsd  = [data[exp][var]['crmsd'] for exp in data.keys() if exp != 'IMERG']
+    sdev = [data[exp][var]['sdev'] for exp in data.keys() if exp != 'IMERG']
+    ccoef, crmsd, sdev = np.array(ccoef),np.array(crmsd),np.array(sdev)
+    print('plotting taylor diagrams..')
+    fig = plt.figure(figsize=(10,10))
+    plot_taylor(sdev,crmsd,ccoef,list(data.keys()))
+    plt.tight_layout(w_pad=0.1)
+    fig.savefig('Figures_48h/stats_wind/'+fname+'-taylor.png', dpi=500)    
+    print('stats_wind/'+fname+'-taylor created!')
+    
+    
+    df_stats = pd.DataFrame(crmsd,
+                           index=[exp for exp in data.keys() if exp != 'IMERG'],
+                           columns=['rmse'])
+    df_stats['ccoef'] = ccoef
+    
+    
+    # Normalize values for comparison
+    df_stats_norm = (df_stats-df_stats.min()
+                      )/(df_stats.max()-df_stats.min()) 
+    
+    for df, title in zip([df_stats, df_stats_norm],
+                           ['stats', 'stats normalised']):
+        for col in df.columns:
+            plt.close('all')
+            f, ax = plt.subplots(figsize=(10, 10))
+            ax.bar(df.index,df[col].values)
+            plt.xticks(rotation=30, ha='right')
+            plt.tight_layout()
+            f.savefig('Figures_48h/stats_wind/'+title+'_'+col+'_'+var+'.png', dpi=500)
+    
+    rmse_vals = np.arange(0.6,-0.01,-0.05)
+    r_vals = np.arange(0.6,1.01,0.05)
+    
+    for rmse_val, r_val in itertools.product(rmse_vals, r_vals):
+        
+        rmse_val, r_val = round(rmse_val,2), round(r_val,2)
+        
+        rmse_norm = df_stats_norm['rmse']
+        corrcoef_norm = df_stats_norm['ccoef']
+        
+        approved_rmse = rmse_norm[rmse_norm <= rmse_val].dropna().index.to_list()
+        approved_r = corrcoef_norm[corrcoef_norm >= r_val].dropna().index.to_list()
+        
+        if len(approved_rmse) > 0 and len(approved_r) > 0:
+        
+            approved = list(approved_rmse)
+            approved.extend(x for x in approved_r if x not in approved)
+            
+        else:
+            
+            approved = []
+        
+        if len(approved) > 0 and len(approved) <= 4:
+                    
+            print('\nrmse:', rmse_val, 'r:', r_val)
+            [print(i) for i in approved]
