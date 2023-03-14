@@ -247,6 +247,9 @@ def bar_plot_distances(df, fname):
     
     plt.savefig(fname, dpi=500)
     print(fname,'created!')
+    
+def normalize_df(df):
+    return (df-df.min())/(df.max()-df.min())
         
 if __name__ == '__main__':
     
@@ -258,3 +261,10 @@ if __name__ == '__main__':
     df_dist, df_min = minimum_slp_and_distance(tracks, directory)
     bar_plot_distances(df_dist, directory+'barplot-distances.png')
     bar_plot_distances(df_min, directory+'barplot-min-slp.png')
+    
+    dist_mean_norm = normalize_df(df_dist.mean()).sort_index(ascending=True)
+    slp_mean_norm = normalize_df(df_min.mean()).sort_index(ascending=True)
+    
+    stats = pd.DataFrame(dist_mean_norm, columns=['distance'])
+    stats['minimum presure'] = slp_mean_norm
+    stats.to_csv('./stats/distance_min-slp_normalized.csv')
