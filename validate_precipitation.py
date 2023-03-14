@@ -349,6 +349,8 @@ df_stats['d_index'] = d_index
 # Normalize values for comparison
 df_stats_norm = (df_stats-df_stats.min()
                   )/(df_stats.max()-df_stats.min()) 
+df_stats_norm.sort_index(ascending=True).to_csv(
+    './stats/precip_RMSE_normalised.csv')
 
 for data, title in zip([df_stats, df_stats_norm],
                        ['stats', 'stats normalised']):
