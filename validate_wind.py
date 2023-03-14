@@ -298,7 +298,8 @@ for var in ['u10','v10','windspeed']:
     # Normalize values for comparison
     df_stats_norm = (df_stats-df_stats.min()
                       )/(df_stats.max()-df_stats.min()) 
-    df_stats_norm.to_csv('./stats/'+var+'_RMSE_normalised.csv')
+    df_stats_norm.sort_index(ascending=True).to_csv(
+        './stats/'+var+'_RMSE_normalised.csv')
     
     
     for df, title in zip([df_stats, df_stats_norm],
