@@ -198,7 +198,6 @@ def minimum_slp_and_distance(tracks, directory):
     mins = {}
     
     track_dummy = pd.read_csv(tracks[0], index_col=0)
-    
     track_Cowan = pd.read_csv('tracks_48h/track_Cowan.csv', index_col=0)
     track_Cowan_sliced = track_Cowan.loc[
         slice(track_dummy.index[0],track_dummy.index[-1])]
@@ -243,7 +242,7 @@ def minimum_slp_and_distance(tracks, directory):
         ax1.plot(time,min_slp, markeredgecolor=color, marker=marker,
                     markerfacecolor='None', linewidth=1.5, linestyle=ls,
                     c=color, label=exp, zorder=zorder)
-        if exp != 'ERA5':
+        if exp != 'Cowan':
             ax2.plot(time, distance, markeredgecolor=color, marker=marker,
                         markerfacecolor='None', linewidth=1.5, linestyle=ls,
                         c=color, label=exp, zorder=zorder)
@@ -286,11 +285,11 @@ def bar_plot_distances(df, fname):
     ax.get_legend().remove()
     plt.xticks(rotation=30, ha='right')
     if 'slp' in fname:
-        plt.ylim(975,1005)
+        plt.ylim(990,1015)
         ax.axhline(df_sns['values'].min(),color='gray',alpha=0.6)
     else:
-        plt.ylim(round(df_sns['mean'].min()*.9,-1),
-                  round(df_sns['mean'].max()*1.1,-1))
+        plt.ylim(round(df_sns['mean'].min()-50,-1),
+                  round(df_sns['mean'].max()+50,-1))
     
     plt.savefig(fname, dpi=500)
     print(fname,'created!')
@@ -307,12 +306,12 @@ if __name__ == '__main__':
     tracks_subplots(tracks, directory)
     
     df_dist, df_min = minimum_slp_and_distance(tracks, directory)
-    # bar_plot_distances(df_dist, directory+'barplot-distances.png')
-    # bar_plot_distances(df_min, directory+'barplot-min-slp.png')
+    bar_plot_distances(df_dist, directory+'barplot-distances.png')
+    bar_plot_distances(df_min.drop(columns='Cowan'), directory+'barplot-min-slp.png')
     
-    # dist_mean_norm = normalize_df(df_dist.mean()).sort_index(ascending=True)
-    # slp_mean_norm = normalize_df(df_min.mean()).sort_index(ascending=True)
+    dist_mean_norm = normalize_df(df_dist.mean()).sort_index(ascending=True)
+    slp_mean_norm = normalize_df(df_min.drop(columns='Cowan').mean()).sort_index(ascending=True)
     
-    # stats = pd.DataFrame(dist_mean_norm, columns=['distance'])
-    # stats['minimum presure'] = slp_mean_norm
-    # stats.to_csv('./stats/distance_min-slp_normalized.csv')
+    stats = pd.DataFrame(dist_mean_norm, columns=['distance'])
+    stats['minimum presure'] = slp_mean_norm
+    stats.to_csv('./stats/distance_min-slp_normalised.csv')
