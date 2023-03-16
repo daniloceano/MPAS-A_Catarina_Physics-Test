@@ -138,7 +138,11 @@ mslp = xr.open_dataset(args.ERA5, engine='cfgrib',
 mslp = (mslp * units(mslp.units)).metpy.convert_units('hPa')                    
 era_track = get_track(mslp, 'time')
 era_track.to_csv('tracks_48h/track_ERA5.csv')             
-print('tracks_48h/track_ERA5.csv saved')                      
+print('tracks_48h/track_ERA5.csv saved')     
+
+track_Cowan = pd.read_csv('tracks_48h/track_Cowan.csv', index_col=0)
+track_Cowan_sliced = track_Cowan.loc[
+    slice(first_day,last_day)]                 
                       
 for bench in benchs:
     experiment = get_exp_name(bench)
@@ -158,6 +162,7 @@ for bench in benchs:
                                  mean_virtual_temperature, surface_height)
     
     slp = slp.metpy.convert_units('hPa')
+    slp = slp.sel(Time=track_Cowan_sliced.index)
     
     print('getting track..')
     track = get_track(slp, 'Time')
