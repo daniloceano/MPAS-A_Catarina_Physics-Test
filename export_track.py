@@ -170,6 +170,7 @@ for bench in benchs:
     df_dist = pd.DataFrame({
     'lat_ref': era_track.lat, 'lon_ref': era_track.lon,
     'lat_model': track.lat, 'lon_model': track.lon})
+    df_dist = df_dist.loc[track_Cowan_sliced.index]
         
     track['distance'] =  df_dist.apply(
         lambda row: calculate_distance(row), axis=1)
