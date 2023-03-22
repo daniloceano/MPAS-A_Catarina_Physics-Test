@@ -139,10 +139,10 @@ mslp = xr.open_dataset(args.ERA5, engine='cfgrib',
                 latitude=slice(-20,-35),longitude=slice(-55,-30)).msl
 mslp = (mslp * units(mslp.units)).metpy.convert_units('hPa')                    
 era_track = get_track(mslp, 'time')
-era_track.to_csv(args.odir+'track_ERA5.csv')             
-print(args.odir+'/track_ERA5.csv saved')     
+era_track.to_csv(args.output_directory+'track_ERA5.csv')             
+print(args.output_directory+'/track_ERA5.csv saved')     
 
-track_Cowan = pd.read_csv(args.odir+'/track_Cowan.csv', index_col=0)
+track_Cowan = pd.read_csv(args.output_directory+'/track_Cowan.csv', index_col=0)
 track_Cowan_sliced = track_Cowan.loc[
     slice(first_day,last_day)]                 
                       
@@ -177,5 +177,5 @@ for bench in benchs:
     track['distance'] =  df_dist.apply(
         lambda row: calculate_distance(row), axis=1)
     
-    track.to_csv(args.odir+'/track_'+experiment+'.csv')   
-    print(args.odir+'/track_'+experiment+'.csv saved')
+    track.to_csv(args.output_directory+'/track_'+experiment+'.csv')   
+    print(args.output_directory+'/track_'+experiment+'.csv saved')
