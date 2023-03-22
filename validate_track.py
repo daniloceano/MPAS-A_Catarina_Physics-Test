@@ -73,7 +73,7 @@ def tracks_one_image(tracks, directory):
     
     track_dummy = pd.read_csv(tracks[0], index_col=0)
     
-    track_Cowan = pd.read_csv('tracks_48h/track_Cowan.csv', index_col=0)
+    track_Cowan = pd.read_csv('tracks_'+benchmarks+'/track_Cowan.csv', index_col=0)
     track_Cowan_sliced = track_Cowan.loc[
         slice(track_dummy.index[0],track_dummy.index[-1])]
     
@@ -129,9 +129,9 @@ def tracks_subplots(tracks, directory):
     fig = plt.figure(figsize=(10, 13))
     gs = gridspec.GridSpec(6, 3)
     
-    track_era = pd.read_csv('tracks_48h/track_ERA5.csv', index_col=0)
+    track_era = pd.read_csv('tracks_'+benchmarks+'/track_ERA5.csv', index_col=0)
     
-    track_Cowan = pd.read_csv('tracks_48h/track_Cowan.csv', index_col=0)
+    track_Cowan = pd.read_csv('tracks_'+benchmarks+'/track_Cowan.csv', index_col=0)
     track_Cowan_sliced = track_Cowan.loc[
         slice(track_era.index[0],track_era.index[-1])]
     lons_cowan, lats_cowan = track_Cowan_sliced.lon, track_Cowan_sliced.lat
@@ -198,7 +198,7 @@ def minimum_slp_and_distance(tracks, directory):
     mins = {}
     
     track_dummy = pd.read_csv(tracks[0], index_col=0)
-    track_Cowan = pd.read_csv('tracks_48h/track_Cowan.csv', index_col=0)
+    track_Cowan = pd.read_csv('tracks_'+benchmarks+'/track_Cowan.csv', index_col=0)
     track_Cowan_sliced = track_Cowan.loc[
         slice(track_dummy.index[0],track_dummy.index[-1])]
     
@@ -242,7 +242,7 @@ def minimum_slp_and_distance(tracks, directory):
         ax1.plot(time,min_slp, markeredgecolor=color, marker=marker,
                     markerfacecolor='None', linewidth=1.5, linestyle=ls,
                     c=color, label=exp, zorder=zorder)
-        if exp != 'Cowan':
+        if exp != 'Cowan' and exp !='ERA5':
             ax2.plot(time, distance, markeredgecolor=color, marker=marker,
                         markerfacecolor='None', linewidth=1.5, linestyle=ls,
                         c=color, label=exp, zorder=zorder)
@@ -299,11 +299,14 @@ def normalize_df(df):
         
 if __name__ == '__main__':
     
-    tracks = glob.glob('tracks_48h/*')
+    benchmarks = input("prompt experiments (24h, 48h, 48h_sst): ")
+    
+    tracks = glob.glob('tracks_'+benchmarks+'/*')
     datacrs = ccrs.PlateCarree()
-    directory = 'Figures_48h/tracks/'
+    directory = 'Figures_'+benchmarks+'/tracks/'
     tracks_one_image(tracks, directory)
-    tracks_subplots(tracks, directory)
+    if benchmarks != '48h_sst':
+        tracks_subplots(tracks, directory)
     
     df_dist, df_min = minimum_slp_and_distance(tracks, directory)
     bar_plot_distances(df_dist, directory+'barplot-distances.png')
