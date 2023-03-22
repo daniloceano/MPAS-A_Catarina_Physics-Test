@@ -109,6 +109,8 @@ def calculate_distance(row):
 parser = argparse.ArgumentParser()
 parser.add_argument('-bdir','--bench_directory', type=str, required=True,
                         help='''path to benchmark directory''')
+parser.add_argument('-odir','--output_directory', type=str, required=True,
+                        help='''path to directory to save data''')
 parser.add_argument('-o','--output', type=str, default=None,
                         help='''output name to append file''')
 parser.add_argument('-e','--ERA5', type=str, default=None,
@@ -137,10 +139,10 @@ mslp = xr.open_dataset(args.ERA5, engine='cfgrib',
                 latitude=slice(-20,-35),longitude=slice(-55,-30)).msl
 mslp = (mslp * units(mslp.units)).metpy.convert_units('hPa')                    
 era_track = get_track(mslp, 'time')
-era_track.to_csv('tracks_48h/track_ERA5.csv')             
-print('tracks_48h/track_ERA5.csv saved')     
+era_track.to_csv(args.odir+'track_ERA5.csv')             
+print(args.odir+'/track_ERA5.csv saved')     
 
-track_Cowan = pd.read_csv('tracks_48h/track_Cowan.csv', index_col=0)
+track_Cowan = pd.read_csv(args.odir+'/track_Cowan.csv', index_col=0)
 track_Cowan_sliced = track_Cowan.loc[
     slice(first_day,last_day)]                 
                       
@@ -175,5 +177,5 @@ for bench in benchs:
     track['distance'] =  df_dist.apply(
         lambda row: calculate_distance(row), axis=1)
     
-    track.to_csv('tracks_48h/track_'+experiment+'.csv')   
-    print('tracks_48h/track_'+experiment+'.csv saved')
+    track.to_csv(args.odir+'/track_'+experiment+'.csv')   
+    print(args.odir+'/track_'+experiment+'.csv saved')
