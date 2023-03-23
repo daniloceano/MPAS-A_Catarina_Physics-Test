@@ -120,6 +120,8 @@ parser.add_argument('-o','--output', type=str, default=None,
 
 args = parser.parse_args()
 
+benchmarks = input("prompt experiments (24h, 48h, 48h_sst): ")
+
 ## Start the code ##
 benchs = glob.glob(args.bench_directory+'/run*')
 # Dummy for getting model times
@@ -245,8 +247,8 @@ if args.output is not None:
     fname = args.output
 else:
     fname = (args.bench_directory).split('/')[-2].split('.nc')[0]
-fname1 = args.output_directory+fname+'_acc_prec'
-fname2 = args.output_directory+fname+'_acc_prec_bias'
+fname1 = 'Figrues_'+benchmarks+'/'+fname+'_acc_prec'
+fname2 = 'Figrues_'+benchmarks+'/'+fname+'_acc_prec_bias'
 fig1.savefig(fname1+'.png', dpi=500)
 fig2.savefig(fname2+'.png', dpi=500)
 print(fname1,'and',fname1,'saved')
@@ -273,8 +275,8 @@ fig.colorbar(cf, ax=ax, fraction=0.03, pad=0.1)
 ax.coastlines(zorder = 1)
 
 imergname = args.imerg.split('/')[-1].split('.nc')[0]
-fig.savefig(args.output_directory+imergname+'.png', dpi=500)
-print(args.output_directory+imergname,'saved')
+fig.savefig('Figrues_'+benchmarks+'/'+imergname+'.png', dpi=500)
+print('Figrues_'+benchmarks+'/'+imergname,'saved')
 
 # =============================================================================
 # PDFs
@@ -321,8 +323,8 @@ for col in range(3):
             
             
 fig.subplots_adjust(hspace=0.25)
-fig.savefig(args.output_directory+fname+'_PDF.png', dpi=500)    
-print(args.output_directory+fname+'_PDF','saved')
+fig.savefig('Figrues_'+benchmarks+'/'+fname+'_PDF.png', dpi=500)    
+print('Figrues_'+benchmarks+'/'+fname+'_PDF','saved')
 
 # =============================================================================
 # Plot Taylor Diagrams and do Statistics ##
@@ -338,7 +340,7 @@ fig = plt.figure(figsize=(10,10))
 plot_taylor(sdev,crmsd,ccoef,list(data.keys()))
 plt.tight_layout(w_pad=0.1)
 fig.savefig(fname+'_prec-taylor.png', dpi=500)    
-print(args.output_directory+fname+'_prec-taylor created!')
+print('Figrues_'+benchmarks+'/'+fname+'_prec-taylor created!')
 
 
 df_stats = pd.DataFrame(crmsd,
@@ -352,7 +354,7 @@ df_stats['d_index'] = d_index
 df_stats_norm = (df_stats-df_stats.min()
                   )/(df_stats.max()-df_stats.min()) 
 df_stats_norm.sort_index(ascending=True).to_csv(
-    './stats/precip_RMSE_normalised.csv')
+    './stats-'+benchmarks+'/precip_RMSE_normalised.csv')
 
 for data, title in zip([df_stats, df_stats_norm],
                        ['stats', 'stats normalised']):
@@ -362,7 +364,7 @@ for data, title in zip([df_stats, df_stats_norm],
         ax.bar(data.index,data[col].values)
         plt.xticks(rotation=30, ha='right')
         plt.tight_layout()
-        f.savefig('Figures_48h/stats_prec/'+title+'_'+col+'.png', dpi=500)
+        f.savefig('Figures_'+benchmarks+'/stats_prec/'+title+'_'+col+'.png', dpi=500)
 
 rmse_vals = np.arange(0.6,-0.01,-0.05)
 r_vals = np.arange(0.6,1.01,0.05)
