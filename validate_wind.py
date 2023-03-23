@@ -129,7 +129,7 @@ parser.add_argument('-o','--output', type=str, default=None,
 
 args = parser.parse_args()
 
-benchmarks = input("prompt experiments (24h, 48h, 48h_sst): ")
+benchmarks_experiment = input("prompt experiments (24h, 48h, 48h_sst): ")
 
 ## Start the code ##
 # benchs = glob.glob(args.bench_directory+'/run*')
@@ -286,7 +286,7 @@ for var in ['u10','v10','windspeed']:
     fig = plt.figure(figsize=(10,10))
     plot_taylor(sdev,crmsd,ccoef,list(data.keys()))
     plt.tight_layout(w_pad=0.1)
-    fig.savefig('Figures_'+benchmarks+'/stats_wind/'+fname+'-taylor.png', dpi=500)    
+    fig.savefig('Figures_'+benchmarks_experiment+'/stats_wind/'+fname+'-taylor.png', dpi=500)    
     print('stats_wind/'+fname+'-taylor created!')
     
     
@@ -301,7 +301,7 @@ for var in ['u10','v10','windspeed']:
     df_stats_norm = (df_stats-df_stats.min()
                       )/(df_stats.max()-df_stats.min()) 
     df_stats_norm.sort_index(ascending=True).to_csv(
-        './stats-'+benchmarks+'/'+var+'_RMSE_normalised.csv')
+        './stats-'+benchmarks_experiment+'/'+var+'_RMSE_normalised.csv')
     
     
     for df, title in zip([df_stats, df_stats_norm],
@@ -312,7 +312,7 @@ for var in ['u10','v10','windspeed']:
             ax.bar(df.index,df[col].values)
             plt.xticks(rotation=30, ha='right')
             plt.tight_layout()
-            f.savefig('Figures_'+benchmarks+'/stats_wind/'+title+'_'+col+'_'+var+'.png', dpi=500)
+            f.savefig('Figures_'+benchmarks_experiment+'/stats_wind/'+title+'_'+col+'_'+var+'.png', dpi=500)
     
     rmse_vals = np.arange(0.6,-0.01,-0.05)
     r_vals = np.arange(0.6,1.01,0.05)
