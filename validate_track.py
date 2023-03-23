@@ -248,7 +248,7 @@ def minimum_slp_and_distance(tracks, directory):
                         c=color, label=exp, zorder=zorder)
         
     df = pd.DataFrame(stats, index=['mean_dist','std']).T
-    df.to_csv('stats/distances.csv')
+    df.to_csv('stats-'+benchmarks+'/distances.csv')
     
     df_dist = pd.DataFrame.from_dict(distances)
     df_min = pd.DataFrame.from_dict(mins)
@@ -317,4 +317,4 @@ if __name__ == '__main__':
     
     stats = pd.DataFrame(dist_mean_norm, columns=['distance'])
     stats['minimum presure'] = slp_mean_norm
-    stats.to_csv('./stats/distance_min-slp_normalised.csv')
+    stats.to_csv('./stats-'+benchmarks+'/distance_min-slp_normalised.csv')
