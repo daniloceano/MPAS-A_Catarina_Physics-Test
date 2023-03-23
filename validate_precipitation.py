@@ -111,6 +111,8 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('-bdir','--bench_directory', type=str, required=True,
                         help='''path to benchmark directory''')
+parser.add_argument('-odir','--output_directory', type=str, required=True,
+                        help='''path to directory to save data''')
 parser.add_argument('-i','--imerg', type=str, default=None, required=True,
                         help='''path to IMERG data''')
 parser.add_argument('-o','--output', type=str, default=None,
@@ -243,8 +245,8 @@ if args.output is not None:
     fname = args.output
 else:
     fname = (args.bench_directory).split('/')[-2].split('.nc')[0]
-fname1 = fname+'_acc_prec'
-fname2 = fname+'_acc_prec_bias'
+fname1 = args.output_directory+fname+'_acc_prec'
+fname2 = args.output_directory+fname+'_acc_prec_bias'
 fig1.savefig(fname1+'.png', dpi=500)
 fig2.savefig(fname2+'.png', dpi=500)
 print(fname1,'and',fname1,'saved')
@@ -271,8 +273,8 @@ fig.colorbar(cf, ax=ax, fraction=0.03, pad=0.1)
 ax.coastlines(zorder = 1)
 
 imergname = args.imerg.split('/')[-1].split('.nc')[0]
-fig.savefig(imergname+'.png', dpi=500)
-print(imergname,'saved')
+fig.savefig(args.output_directory+imergname+'.png', dpi=500)
+print(args.output_directory+imergname,'saved')
 
 # =============================================================================
 # PDFs
@@ -319,8 +321,8 @@ for col in range(3):
             
             
 fig.subplots_adjust(hspace=0.25)
-fig.savefig(fname+'_PDF.png', dpi=500)    
-print(fname+'_PDF','saved')
+fig.savefig(args.output_directory+fname+'_PDF.png', dpi=500)    
+print(args.output_directory+fname+'_PDF','saved')
 
 # =============================================================================
 # Plot Taylor Diagrams and do Statistics ##
@@ -336,7 +338,7 @@ fig = plt.figure(figsize=(10,10))
 plot_taylor(sdev,crmsd,ccoef,list(data.keys()))
 plt.tight_layout(w_pad=0.1)
 fig.savefig(fname+'_prec-taylor.png', dpi=500)    
-print(fname+'_prec-taylor created!')
+print(args.output_directory+fname+'_prec-taylor created!')
 
 
 df_stats = pd.DataFrame(crmsd,
