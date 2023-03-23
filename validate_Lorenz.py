@@ -33,8 +33,9 @@ budget_diff_renamed = ['∂Az/∂t', '∂Ae/∂t',
 
 main_terms = ['Az', 'Ae', 'Kz', 'Ke', 'Ca', 'Ce', 'Ck', 'Ge']
 
+benchmarks = input("prompt experiments (24h, 48h, 48h_sst): ")
 
-results_ERA = pd.read_csv('./LEC_Results_48h/ERA5-ERA5/ERA5-ERA5.csv')
+results_ERA = pd.read_csv('./LEC_Results_'+benchmarks+'/ERA5-ERA5/ERA5-ERA5.csv')
 
 DiscreteColors = ['#58A8D6', '#74D669', '#D6BF5A', '#D6713A', '#D63631']
     
@@ -45,7 +46,7 @@ def get_rsme_r(results, results_ERA):
     for exp in exps:
         dirname = exp.split('/')[-1]
         outfile = glob.glob(
-            './LEC_Results_48h/'+str(dirname)+'*'+'/'+str(dirname)+'*csv')[0]
+            './LEC_Results_'+benchmarks+'/'+str(dirname)+'*'+'/'+str(dirname)+'*csv')[0]
         df_exp = pd.read_csv(outfile, index_col=[0])
         df_exp['Datetime'] = pd.to_datetime(df_exp.Date) + pd.to_timedelta(
             df_exp.Hour, unit='h')
@@ -91,20 +92,24 @@ def sns_heatmap(data,title):
             cmap = cmo.matter_r
     
     plt.close('all')
-    f, ax = plt.subplots(figsize=(10, 10))
+    if benchmarks == '48h_sst':
+        y = 6
+    else:
+        y = 10
+    f, ax = plt.subplots(figsize=(10, y))
     sns.heatmap(data, annot=False, linewidths=.5, ax=ax, cmap=cmap)
 
 
     plt.title(title)
     plt.tight_layout()
-    f.savefig('Figures_48h/stats_Lorenz/'+title)
+    f.savefig('Figures_'+benchmarks+'/stats_Lorenz/'+title)
     
 def normalize_df(df):
     return (df-df.min())/(df.max()-df.min())
    
 
-results = glob.glob('LEC_Results_48h/*')
-results_ERA = pd.read_csv('./LEC_Results_48h/ERA5-ERA5/ERA5-ERA5.csv')
+results = glob.glob('LEC_Results_'+benchmarks+'/*')
+results_ERA = pd.read_csv('./LEC_Results_'+benchmarks+'/ERA5-ERA5/ERA5-ERA5.csv')
 exps = []
 for exp in results:
     if 'ERA5-ERA5' not in exp:

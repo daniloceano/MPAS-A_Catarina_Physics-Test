@@ -148,7 +148,9 @@ def plot_taylor(sdevs,crmsds,ccoefs,experiments):
                       titleOBS = 'IMERG', styleObs =':',
                       axismax = axismax, alpha = 1)
             
-era_file = glob.glob('LEC_results_48h/*MPAS*/*MPAS*.csv')[0]
+benchmarks = input("prompt experiments (24h, 48h): ")    
+
+era_file = glob.glob('LEC_Results_'+benchmarks+'/*MPAS*/*MPAS*.csv')[0]
 era_data = pd.read_csv(era_file)
 era_data['Datetime'] = pd.to_datetime(era_data.Date
                                     ) + pd.to_timedelta(era_data.Hour,unit='h')
@@ -157,7 +159,7 @@ era_data['Datetime'] = pd.to_datetime(era_data.Date
 plt.close('all')
 fig = plt.figure(figsize=(10, 13))
 gs = gridspec.GridSpec(6, 3)
-results = glob.glob('LEC_results_48h/*track')
+results = glob.glob('LEC_Results_'+benchmarks+'/*track')
 i = 0
 for row in range(6):
     for col in range(3):
@@ -165,7 +167,7 @@ for row in range(6):
         exp = results[i]
         dirname = exp.split('/')[-1]
         outfile = glob.glob(
-            './LEC_results_48h/'+str(dirname)+'*'+'/'+str(dirname)+'*csv')[0]
+            './LEC_Results_'+benchmarks+'/'+str(dirname)+'*'+'/'+str(dirname)+'*csv')[0]
                 
         # Open data
         df = pd.read_csv(outfile)
@@ -193,4 +195,4 @@ for t in cbar.ax.get_yticklabels():
       
 plt.subplots_adjust(right=0.85,hspace=0.4, bottom=0.05, top=0.95, left=0.06)     
       
-plt.savefig('Figures_48h/validate_LPS.png',dpi=500)
+plt.savefig('Figures_'+benchmarks+'/validate_LPS.png',dpi=500)

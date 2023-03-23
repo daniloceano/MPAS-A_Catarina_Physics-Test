@@ -35,7 +35,9 @@ generation_terms = ['RGz', 'RGe', 'Gz', 'Ge']
 palette = ['#3B95BF','#87BF4B','#BFAB37','k','#BF3D3B','#C2847A']
 c = ['#3B95BF','#87BF4B','#BFAB37','#BF3D3B']
 
-results_ERA = pd.read_csv('./LEC_Results_48h/ERA5-ERA5/ERA5-ERA5.csv')
+benchmarks = input("prompt experiments (24h, 48h, 48h_sst): ")
+
+results_ERA = pd.read_csv('./LEC_Results_'+benchmarks+'/ERA5-ERA5/ERA5-ERA5.csv')
 
 def get_stats(data):
     ccoef, crmsd, sdev, exps = [], [], [], []
@@ -81,7 +83,7 @@ def plot_timeseries(data):
         fname = term[:3]
     else:
         fname = term
-    plt.savefig('./Figures_48h/timeseries/'+fname+'.png',dpi=300)
+    plt.savefig('./Figures_'+benchmarks+'/timeseries/'+fname+'.png',dpi=300)
     print('Time series created for term: '+fname)
     
 def taylor_diagram(sdevs,crmsds,ccoefs,experiments):
@@ -125,7 +127,7 @@ def plot_taylor(data):
         fname = term[:3]
     else:
         fname = term
-    plt.savefig('./Figures_48h/taylor/'+fname+'.png', dpi=300)
+    plt.savefig('./Figures_'+benchmarks+'/taylor/'+fname+'.png', dpi=300)
     print('Taylor diagram created for term: '+term)
     
 
@@ -147,7 +149,10 @@ def terms_label(term):
     return label    
 
 # ----------------------------------
-results = glob.glob('LEC_Results_48h/*')
+
+
+
+results = glob.glob('LEC_Results_'+benchmarks+'/*')
 exps = []
 for exp in results:
     exps.append(exp.split('/')[1].split('_MPAS_track')[0])
@@ -158,7 +163,7 @@ for exp in exps:
     print(exp)
     dirname = exp.split('/')[-1]
     outfile = glob.glob(
-        './LEC_Results_48h/'+str(dirname)+'*'+'/'+str(dirname)+'*csv')[0]
+        './LEC_Results_'+benchmarks+'/'+str(dirname)+'*'+'/'+str(dirname)+'*csv')[0]
     df = pd.read_csv(outfile)
     df['Datetime'] = pd.to_datetime(df.Date) + pd.to_timedelta(df.Hour, unit='h')
     time = df.Datetime    
