@@ -120,6 +120,11 @@ args = parser.parse_args()
 
 benchmarks = input("prompt experiments (24h, 48h, 48h_sst): ")
 
+if benchmarks == '48h_sst':
+    ncol, nrow, imax = 2, 2, 3
+else:
+    ncol, nrow, imax = 3, 6, 18
+
 ## Start the code ##
 benchs = glob.glob(args.bench_directory+'/run*')
 # Dummy for getting model times
@@ -191,11 +196,6 @@ datacrs = ccrs.PlateCarree()
 
 prec_levels = np.arange(0,425,4)
 bias_levels = np.arange(-700,411,10)
-
-if benchmarks == '48h_sst':
-    ncol, nrow, imax = 2, 2, 3
-else:
-    ncol, nrow, imax = 3, 6, 18
 
 i = 0
 for col in range(ncol):
@@ -300,8 +300,11 @@ gs = gridspec.GridSpec(6, 3)
 
 
 i = 0
-for col in range(3):
-    for row in range(6):
+for col in range(ncol):
+    for row in range(nrow):
+        
+        if i == imax:
+            break
     
         ax = fig.add_subplot(gs[row, col], frameon=True)
     
