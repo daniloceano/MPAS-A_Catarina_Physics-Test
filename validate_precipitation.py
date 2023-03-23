@@ -111,8 +111,6 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('-bdir','--bench_directory', type=str, required=True,
                         help='''path to benchmark directory''')
-parser.add_argument('-odir','--output_directory', type=str, required=True,
-                        help='''path to directory to save data''')
 parser.add_argument('-i','--imerg', type=str, default=None, required=True,
                         help='''path to IMERG data''')
 parser.add_argument('-o','--output', type=str, default=None,
