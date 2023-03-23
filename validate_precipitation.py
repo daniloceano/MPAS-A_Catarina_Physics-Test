@@ -192,9 +192,17 @@ datacrs = ccrs.PlateCarree()
 prec_levels = np.arange(0,425,4)
 bias_levels = np.arange(-700,411,10)
 
+if benchmarks == '48h_sst':
+    ncol, nrow, imax = 2, 2, 3
+else:
+    ncol, nrow, imax = 3, 6, 18
+
 i = 0
-for col in range(3):
-    for row in range(6):
+for col in range(ncol):
+    for row in range(nrow):
+        
+        if i == imax:
+            break
         
         bench = benchs[i]
         experiment = get_exp_name(bench)
