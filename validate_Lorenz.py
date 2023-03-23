@@ -122,7 +122,7 @@ df_corrcoef_main = df_corrcoef_all[main_terms]
 
 # make a csv with normalised values for comparing with other terms
 df_rmse_main_norm = normalize_df(df_rmse_main).sort_index(ascending=True)
-df_rmse_main_norm.to_csv('./stats/Lorenz-main_RMSE_normalised.csv')
+df_rmse_main_norm.to_csv('./stats-'+benchmarks+'/Lorenz-main_RMSE_normalised.csv')
 
 for df_rmse, df_corrcoef in zip([df_rmse_all, df_rmse_main],
                                 [df_corrcoef_all, df_corrcoef_main]):

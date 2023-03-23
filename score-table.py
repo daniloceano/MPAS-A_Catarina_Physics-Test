@@ -25,13 +25,15 @@ def sns_heatmap(data,title):
 
     plt.title(title)
     plt.tight_layout()
-    f.savefig('Figures_48h/'+title+'.png')
+    f.savefig('Figures_'+benchmarks+'/'+title+'.png')
 
-stat_files = glob('./stats/*normalised.csv')
+benchmarks = input("prompt experiments (24h, 48h, 48h_sst): ")
+
+stat_files = glob('./stats-'+benchmarks+'/*normalised.csv')
 
 stats = {}
 for file in stat_files:
-    variable = file.split('./stats/')[-1].split('_')[0]
+    variable = file.split('./stats-'+benchmarks+'/')[-1].split('_')[0]
     tmp = pd.read_csv(file, index_col=[0]).sort_index(ascending=True)
     indexes = tmp.index
     tmp.index = range(len(tmp))
@@ -50,4 +52,4 @@ df['mean'] = df.mean(axis=1)
 sns_heatmap(df,'scores')
 
 
-df.to_csv('./stats/score-table.csv')
+df.to_csv('./stats-'+benchmarks+'/score-table.csv')
