@@ -7,14 +7,25 @@ Created on Fri Dec 30 22:27:31 2022
 """
 
 import xarray as xr
+import argparse
 
 def convert_lon(df,LonIndexer):
     df.coords[LonIndexer] = (df.coords[LonIndexer] + 180) % 360 - 180
     df = df.sortby(df[LonIndexer])
     return df
 
-era_file = './files/Catarina-PhysicsTest-48h_ERA5.nc'
-masked_file = './files/mp_kessler-cu_grell_freitas_MPAS.nc'
+## Parser options ##
+parser = argparse.ArgumentParser()
+
+parser.add_argument('-e','--ERA5', type=str, required=True,
+                        help='''ERA5 file to be masked''')
+parser.add_argument('-m','--MPAS', type=str, default=None, required=True,
+                        help='''MPAS-A file to read mask from''')
+
+args = parser.parse_args()
+
+era_file = args.ERA5
+masked_file = args.MPAS
 
 era_data = convert_lon(xr.open_dataset(era_file), 'longitude')
 masked_data = convert_lon(xr.open_dataset(masked_file),'longitude')
