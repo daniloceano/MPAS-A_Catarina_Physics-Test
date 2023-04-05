@@ -299,13 +299,13 @@ def normalize_df(df):
         
 if __name__ == '__main__':
     
-    benchmarks = input("prompt experiments (24h, 48h, 48h_sst): ")
+    benchmarks = input("prompt experiments (24h, 48h, 48h_sst, 72h_sst): ")
     
     tracks = glob.glob('tracks_'+benchmarks+'/*')
     datacrs = ccrs.PlateCarree()
     directory = 'Figures_'+benchmarks+'/tracks/'
     tracks_one_image(tracks, directory)
-    if benchmarks != '48h_sst':
+    if benchmarks in ['48h_sst', '24h'] :
         tracks_subplots(tracks, directory)
     
     df_dist, df_min = minimum_slp_and_distance(tracks, directory)
