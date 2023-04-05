@@ -119,6 +119,7 @@ args = parser.parse_args()
 
 ## Start the code ##
 benchs = glob.glob(args.bench_directory+'/run*')
+print(benchs)
 
 # Dummy for getting model times
 model_output = benchs[0]+'/latlon.nc'
