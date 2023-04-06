@@ -56,11 +56,11 @@ elif len(era_data_sliced.time) > len(interp_data.Time):
                                                      interp_data.Time.max().values))
 else:
     print('it was not necessary for time dimension')
-if len(interp_data.level) > len(era_data_sliced.level):
+if len(interp_data.level) > len(era_data_sliced.isobaricInhPa):
     interp_data = interp_data.sel(level=slice(era_data_sliced.level.min().values,
                                              era_data_sliced.level.max().values)) 
-elif len(era_data_sliced.level) > len(interp_data.level):
-    era_data_sliced = era_data_sliced.sel(level=slice(interp_data.level.min().values,
+elif len(era_data_sliced.isobaricInhPa) > len(interp_data.level):
+    era_data_sliced = era_data_sliced.sel(isobaricInhPa=slice(interp_data.level.min().values,
                                                      interp_data.level.max().values))
 else:
     print('it was not necessary for level dimension')
@@ -77,5 +77,5 @@ print('returning temperature to its original shape..')
 var_masked['t'] = era_data_sliced['t']
 
 print('saving masked ERA5 data..') 
-fname = era_file.split('.nc')[0]+'-masked.nc'
+fname = era_file.split('.grb')[0]+'-masked.nc'
 var_masked.to_netcdf(fname)
