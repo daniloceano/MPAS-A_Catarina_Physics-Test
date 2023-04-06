@@ -120,7 +120,7 @@ args = parser.parse_args()
 
 benchmarks = input("prompt experiments (24h, 48h, 48h_sst, 72h_sst): ")
 
-if ['48h_sst', '72h_sst'] in benchmarks:
+if benchmarks == '48h_sst' or '72h_sst':
     ncol, nrow, imax = 2, 2, 3
 else:
     ncol, nrow, imax = 3, 6, 18
