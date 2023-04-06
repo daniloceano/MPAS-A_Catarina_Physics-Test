@@ -118,9 +118,9 @@ parser.add_argument('-o','--output', type=str, default=None,
 
 args = parser.parse_args()
 
-benchmarks = input("prompt experiments (24h, 48h, 48h_sst): ")
+benchmarks = input("prompt experiments (24h, 48h, 48h_sst, 72h_sst): ")
 
-if benchmarks == '48h_sst':
+if ['48h_sst', '72h_sst'] in benchmarks:
     ncol, nrow, imax = 2, 2, 3
 else:
     ncol, nrow, imax = 3, 6, 18
