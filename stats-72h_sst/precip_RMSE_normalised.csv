@@ -1,0 +1,4 @@
+,rmse,ccoef,d_index
+thompson_ntiedtke,0.0,0.7508444310225765,1.0
+thompson_tiedtke,0.8933035621724651,1.0,0.0
+wsm6_ntiedtke,1.0,0.0,0.4731183338679606
