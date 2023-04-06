@@ -33,7 +33,7 @@ budget_diff_renamed = ['∂Az/∂t', '∂Ae/∂t',
 
 main_terms = ['Az', 'Ae', 'Kz', 'Ke', 'Ca', 'Ce', 'Ck', 'Ge']
 
-benchmarks = input("prompt experiments (24h, 48h, 48h_sst): ")
+benchmarks = input("prompt experiments (24h, 48h, 48h_sst, 72h_sst): ")
 
 results_ERA = pd.read_csv('./LEC_Results_'+benchmarks+'/ERA5-ERA5/ERA5-ERA5.csv')
 
@@ -46,7 +46,8 @@ def get_rsme_r(results, results_ERA):
     for exp in exps:
         dirname = exp.split('/')[-1]
         outfile = glob.glob(
-            './LEC_Results_'+benchmarks+'/'+str(dirname)+'*'+'/'+str(dirname)+'*csv')[0]
+            './LEC_Results_'+benchmarks+'/'+str(dirname)+'*'+'/'+str(dirname
+                                                                )+'*csv')[0]
         df_exp = pd.read_csv(outfile, index_col=[0])
         df_exp['Datetime'] = pd.to_datetime(df_exp.Date) + pd.to_timedelta(
             df_exp.Hour, unit='h')
@@ -54,6 +55,14 @@ def get_rsme_r(results, results_ERA):
         df_exp.index = time
         df_exp = df_exp.drop(columns=['Datetime'])
         df_exp_dict[exp] = df_exp
+        
+        results_ERA['Datetime'] = pd.to_datetime(results_ERA['Date']
+                        ) + pd.to_timedelta(results_ERA['Hour'], unit='H')
+        
+        mask = (results_ERA['Datetime'] >= df_exp.index[0]) & (
+            results_ERA['Datetime'] <= df_exp.index[-1])
+        
+        results_ERA = results_ERA.loc[mask]
         
         rmse = {}
         corrcoef = {}
@@ -94,6 +103,8 @@ def sns_heatmap(data,title):
     plt.close('all')
     if benchmarks == '48h_sst':
         y = 6
+    elif benchmarks == '72h_sst':
+        y = 2
     else:
         y = 10
     f, ax = plt.subplots(figsize=(10, y))
