@@ -42,10 +42,15 @@ class BenchData:
         cumulus = expname.split('.')[-1].split('_')[-1] 
         return microp+'_'+cumulus
         
-def interpolate_mpas_data(variable_data, target):
-    return variable_data.rename({'latitude':'lat','longitude':'lon'}
+def interpolate_mpas_data(variable_data, target, reference):
+    if reference == 'quickscat':
+        return variable_data.rename({'latitude':'lat','longitude':'lon'}
             ).interp(lat=target.lat,lon=target.lon,method='cubic',
-                     assume_sorted=False)        
+                     assume_sorted=False)
+    elif reference == 'ERA5':
+        return variable_data.interp(latitude=target.latitude,
+                     longitude=target.longitude,method='cubic',
+                     assume_sorted=False)
 
 def convert_lon(df,LonIndexer):
     df.coords[LonIndexer] = (df.coords[LonIndexer] + 180) % 360 - 180
@@ -57,12 +62,6 @@ def anim(path,pattern):
     ff=[]
     for i in range(len(filenames)):
     	ff.append(filenames[i].split('/')[-1].split('.')[0])
-    
-    df = sorted(ff,key=str)
-    
-    # filenames =[]
-    # for i in range(len(df)):
-    # 	filenames.append(path+str(df[i])+'.png')
     
     with imageio.get_writer(path+'/wind.mp4',fps=5) as writer:
         for filename in filenames:
@@ -122,10 +121,13 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('-bdir','--bench_directory', type=str, required=True,
                         help='''path to benchmark directory''')
-parser.add_argument('-q','--quickscat', type=str, default=None, required=True,
-                        help='''path to QUICKSCAT data''')
 parser.add_argument('-o','--output', type=str, default=None,
                         help='''output name to append file''')
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument('-q','--quickscat', type=str, default=None,
+                        help='''path to QUICKSCAT data''')
+group.add_argument('-e','--ERA5', type=str, default=None,
+                        help='''path to ERA5 data''')
 
 args = parser.parse_args()
 
@@ -144,14 +146,24 @@ times = get_times_nml(namelist,model_data)
 
 first_day = datetime.datetime.strftime(times[0], '%Y-%m-%d')
 last_day = datetime.datetime.strftime(times[-2], '%Y-%m-%d')
-# da_quickscat = xr.open_dataset(args.qs).sel(lat=slice(model_data.latitude[-1],
-#                  model_data.latitude[0]),lon=slice(model_data.longitude[0],
-#                 model_data.longitude[-1])).sel(time=slice(first_day,last_day))
-da_quickscat = convert_lon(xr.open_dataset(args.quickscat),'lon').sel(
-                    lat=slice(model_data.latitude[-1],model_data.latitude[0]),
-                    lon=slice(model_data.longitude[0],model_data.longitude[-1])
-                    ).sel(time=slice(first_day,last_day))
-                                     
+if args.quickscat:
+    da_reference = convert_lon(xr.open_dataset(args.quickscat),'lon').sel(
+                        lat=slice(model_data.latitude[-1],model_data.latitude[0]),
+                        lon=slice(model_data.longitude[0],model_data.longitude[-1])
+                        ).sel(time=slice(first_day,last_day))
+    u, v = da_reference.uwnd, da_reference.vwnd
+    reference = 'quickscat'
+    
+if args.ERA5:
+    da_reference = convert_lon(xr.open_dataset(args.ERA5),'longitude').sel(
+                        latitude=slice(
+                            model_data.latitude[0],model_data.latitude[-1]),
+                        longitude=slice(
+                            model_data.longitude[0],model_data.longitude[-1])
+                        ).sel(time=slice(first_day,last_day))
+    u = da_reference.u.sel(isobaricInhPa=1000)
+    v = da_reference.v.sel(isobaricInhPa=1000)    
+    reference = 'ERA5'                          
 
 print('\nOpening all data and putting it into a dictionary...')
 benchmarks = [BenchData(bench, times) for bench in benchs]
@@ -162,24 +174,23 @@ for benchmark in benchmarks:
     print('\n',exp_name)
     data[exp_name] = {}
     
-    for model_var, quickscat_var in zip(['u10','v10','windspeed'],
-                                        ['uwnd','vwnd','windspeed']):
+    for model_var, reference_var in zip(['u10','v10','windspeed'],
+                                        [u,v,'windspeed']):
         
         data[exp_name][model_var] = {}
         
         if model_var == 'windspeed':
             variable_experiment_data = wind_speed(benchmark.data['u10'],
                                                benchmark.data['v10'])
-            reference_data = wind_speed(da_quickscat['uwnd'],
-                                        da_quickscat['vwnd'])  
+            reference_data = wind_speed(u,v)  
             
             
         else:
             variable_experiment_data = benchmark.data[model_var]
-            reference_data = da_quickscat[quickscat_var]
+            reference_data = reference_var
             
-        interpoled_data = interpolate_mpas_data(variable_experiment_data.compute(),
-                                                    reference_data)
+        interpoled_data = interpolate_mpas_data(
+            variable_experiment_data.compute(),reference_data, reference)
         
         data[exp_name][model_var]['data'] = variable_experiment_data
         data[exp_name][model_var]['interpoled_data'] = interpoled_data
@@ -189,7 +200,9 @@ for benchmark in benchmarks:
         statistical_metrics = sm.taylor_statistics(
             resampled_data.values.ravel(), reference_data.values.ravel())
     
-        data[exp_name][model_var].update({metric: statistical_metrics[metric][1] for metric in statistical_metrics.keys()})
+        data[exp_name][model_var].update(
+            {metric: statistical_metrics[metric][1] 
+             for metric in statistical_metrics.keys()})
     
 
 # # =============================================================================
