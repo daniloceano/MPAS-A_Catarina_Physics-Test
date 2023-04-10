@@ -151,7 +151,8 @@ if args.quickscat:
                         lat=slice(model_data.latitude[-1],model_data.latitude[0]),
                         lon=slice(model_data.longitude[0],model_data.longitude[-1])
                         ).sel(time=slice(first_day,last_day))
-    u, v = da_reference.uwnd, da_reference.vwnd
+    u = da_reference.uwnd
+    v = da_reference.vwnd
     reference = 'quickscat'
     
 if args.ERA5:
@@ -161,8 +162,8 @@ if args.ERA5:
                         longitude=slice(
                             model_data.longitude[0],model_data.longitude[-1])
                         ).sel(time=slice(first_day,last_day))
-    u = da_reference.u.sel(isobaricInhPa=1000)
-    v = da_reference.v.sel(isobaricInhPa=1000)    
+    u = da_reference.u10
+    v = da_reference.v10
     reference = 'ERA5'                          
 
 print('\nOpening all data and putting it into a dictionary...')
