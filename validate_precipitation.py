@@ -16,11 +16,11 @@ import pandas as pd
 import xarray as xr
 import cmocean.cm as cmo
 import cartopy.crs as ccrs
-import seaborn as sns
 
 import scipy.stats as st
 import skill_metrics as sm
 
+import matplotlib.colors as colors
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
@@ -196,6 +196,7 @@ datacrs = ccrs.PlateCarree()
 
 prec_levels = np.arange(0,425,4)
 bias_levels = np.arange(-700,411,10)
+bias_norm = colors.TwoSlopeNorm(vmin=-700, vcenter=0, vmax=411)
 
 i = 0
 for col in range(ncol):
@@ -239,7 +240,7 @@ for col in range(ncol):
                 bias = prec_interp-imerg_accprec
                 cf2 = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,bias,
                                  cmap=cmo.balance_r,
-                                 levels=bias_levels)
+                                 levels=bias_levels, norm=bias_norm)
                 print('bias limits:',float(bias.min()), float(bias.max()))
             ax.coastlines(zorder = 1)
         i+=1
