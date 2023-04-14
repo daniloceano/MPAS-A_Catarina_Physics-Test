@@ -350,7 +350,7 @@ print('plotting taylor diagrams..')
 fig = plt.figure(figsize=(10,10))
 plot_taylor(sdev,crmsd,ccoef,list(data.keys()))
 plt.tight_layout(w_pad=0.1)
-fig.savefig(fname+'_prec-taylor.png', dpi=500)    
+fig.savefig('Figures_'+benchmarks+'/'+fname+'_prec-taylor.png', dpi=500)    
 print('Figures_'+benchmarks+'/'+fname+'_prec-taylor created!')
 
 
