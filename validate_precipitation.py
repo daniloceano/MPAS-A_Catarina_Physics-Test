@@ -124,6 +124,7 @@ if benchmarks == '48h_sst' or '72h_sst':
     ncol, nrow, imax = 2, 2, 3
 else:
     ncol, nrow, imax = 3, 6, 18
+print('Figure will have ncols:', ncol, 'rows:', nrow, 'n:', n)
 
 ## Start the code ##
 benchs = glob.glob(args.bench_directory+'/run*')
