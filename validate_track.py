@@ -301,7 +301,7 @@ if __name__ == '__main__':
     
     benchmarks = input("prompt experiments (24h, 48h, 48h_sst, 72h_sst): ")
     
-    tracks = glob.glob('tracks_'+benchmarks+'/*')
+    tracks = glob.glob('tracks_'+benchmarks+'/*csv')
     datacrs = ccrs.PlateCarree()
     directory = 'Figures_'+benchmarks+'/tracks/'
     tracks_one_image(tracks, directory)

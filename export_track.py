@@ -105,79 +105,81 @@ def calculate_distance(row):
     end = (row['lat_model'], row['lon_model'])
     return geodesic(start, end).km  
 
-## Parser options ##
-parser = argparse.ArgumentParser()
-parser.add_argument('-bdir','--bench_directory', type=str, required=True,
-                        help='''path to benchmark directory''')
-parser.add_argument('-odir','--output_directory', type=str, required=True,
-                        help='''path to directory to save data''')
-parser.add_argument('-o','--output', type=str, default=None,
-                        help='''output name to append file''')
-parser.add_argument('-e','--ERA5', type=str, default=None,
-                        help='''wether to validade with ERA5 data''')
-args = parser.parse_args()
+if __name__ == '__main__':
 
-## Start the code ##
-benchs = glob.glob(args.bench_directory+'/run*')
-print(benchs)
+    ## Parser options ##
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-bdir','--bench_directory', type=str, required=True,
+                            help='''path to benchmark directory''')
+    parser.add_argument('-odir','--output_directory', type=str, required=True,
+                            help='''path to directory to save data''')
+    parser.add_argument('-o','--output', type=str, default=None,
+                            help='''output name to append file''')
+    parser.add_argument('-e','--ERA5', type=str, default=None,
+                            help='''wether to validade with ERA5 data''')
+    args = parser.parse_args()
 
-# Dummy for getting model times
-model_output = benchs[0]+'/latlon.nc'
-namelist_path = benchs[0]+"/namelist.atmosphere"
+    ## Start the code ##
+    benchs = glob.glob(args.bench_directory+'/run*')
+    print(benchs)
 
-# open data and namelist
-print('openinning first bench just to get dates...')
-model_data = open_dataset(benchs[0])
-namelist = f90nml.read(glob.glob(namelist_path)[0])
-times = get_times_nml(namelist,model_data.compute()).tolist()
-first_day = datetime.datetime.strftime(times[0], '%Y-%m-%d %HZ')
-last_day = datetime.datetime.strftime(times[-1], '%Y-%m-%d %HZ')                      
-print('Analysis is from',first_day,'to',last_day)  
+    # Dummy for getting model times
+    model_output = benchs[0]+'/latlon.nc'
+    namelist_path = benchs[0]+"/namelist.atmosphere"
 
-print('\nOpening all data and putting it into a dictionary...')
-mslp = xr.open_dataset(args.ERA5, engine='cfgrib',
-                filter_by_keys={'typeOfLevel': 'surface'}
-                ).sel(time=slice(times[0],times[-1]),
-                latitude=slice(-20,-35),longitude=slice(-55,-30)).msl
-mslp = (mslp * units(mslp.units)).metpy.convert_units('hPa')                    
-era_track = get_track(mslp, 'time')
-era_track.to_csv(args.output_directory+'track_ERA5.csv')             
-print(args.output_directory+'/track_ERA5.csv saved')     
+    # open data and namelist
+    print('openinning first bench just to get dates...')
+    model_data = open_dataset(benchs[0])
+    namelist = f90nml.read(glob.glob(namelist_path)[0])
+    times = get_times_nml(namelist,model_data.compute()).tolist()
+    first_day = datetime.datetime.strftime(times[0], '%Y-%m-%d %HZ')
+    last_day = datetime.datetime.strftime(times[-1], '%Y-%m-%d %HZ')                      
+    print('Analysis is from',first_day,'to',last_day)  
 
-track_Cowan = pd.read_csv(args.output_directory+'/track_Cowan.csv', index_col=0)
-track_Cowan_sliced = track_Cowan.loc[
-    slice(first_day,last_day)]                 
-                      
-for bench in benchs:
-    experiment = get_exp_name(bench)
-    print('\n',experiment)
-    
-    print('computing slp...')
-    model_data  = open_dataset(bench, times=times)
-    
-    surface_pressure = model_data['surface_pressure'] * units.Pa
-    surface_height = model_data['zgrid'].isel(nVertLevelsP1=0) * units.m
-    surface_t = model_data.t2m * units.K
-    surface_miximg_ratio = model_data.q2 * units('kg/kg')
-    mean_virtual_temperature = virtual_temperature(surface_t,
-                                        surface_miximg_ratio).mean(dim='Time')
-    
-    slp = surface_pressure_to_mslp(surface_pressure,
-                                 mean_virtual_temperature, surface_height)
-    
-    slp = slp.metpy.convert_units('hPa')
-    slp = slp.sel(Time=track_Cowan_sliced.index)
-    
-    print('getting track..')
-    track = get_track(slp, 'Time')
-    
-    df_dist = pd.DataFrame({
-    'lat_ref': era_track.lat, 'lon_ref': era_track.lon,
-    'lat_model': track.lat, 'lon_model': track.lon})
-    df_dist = df_dist.loc[track_Cowan_sliced.index]
+    print('\nOpening all data and putting it into a dictionary...')
+    mslp = xr.open_dataset(args.ERA5, engine='cfgrib',
+                    filter_by_keys={'typeOfLevel': 'surface'}
+                    ).sel(time=slice(times[0],times[-1]),
+                    latitude=slice(-20,-35),longitude=slice(-55,-30)).msl
+    mslp = (mslp * units(mslp.units)).metpy.convert_units('hPa')                    
+    era_track = get_track(mslp, 'time')
+    era_track.to_csv(args.output_directory+'track_ERA5.csv')             
+    print(args.output_directory+'/track_ERA5.csv saved')     
+
+    track_Cowan = pd.read_csv(args.output_directory+'/track_Cowan.csv', index_col=0)
+    track_Cowan_sliced = track_Cowan.loc[
+        slice(first_day,last_day)]                 
+                        
+    for bench in benchs:
+        experiment = get_exp_name(bench)
+        print('\n',experiment)
         
-    track['distance'] =  df_dist.apply(
-        lambda row: calculate_distance(row), axis=1)
-    
-    track.to_csv(args.output_directory+'/track_'+experiment+'.csv')   
-    print(args.output_directory+'/track_'+experiment+'.csv saved')
+        print('computing slp...')
+        model_data  = open_dataset(bench, times=times)
+        
+        surface_pressure = model_data['surface_pressure'] * units.Pa
+        surface_height = model_data['zgrid'].isel(nVertLevelsP1=0) * units.m
+        surface_t = model_data.t2m * units.K
+        surface_miximg_ratio = model_data.q2 * units('kg/kg')
+        mean_virtual_temperature = virtual_temperature(surface_t,
+                                            surface_miximg_ratio).mean(dim='Time')
+        
+        slp = surface_pressure_to_mslp(surface_pressure,
+                                    mean_virtual_temperature, surface_height)
+        
+        slp = slp.metpy.convert_units('hPa')
+        slp = slp.sel(Time=track_Cowan_sliced.index)
+        
+        print('getting track..')
+        track = get_track(slp, 'Time')
+        
+        df_dist = pd.DataFrame({
+        'lat_ref': era_track.lat, 'lon_ref': era_track.lon,
+        'lat_model': track.lat, 'lon_model': track.lon})
+        df_dist = df_dist.loc[track_Cowan_sliced.index]
+            
+        track['distance'] =  df_dist.apply(
+            lambda row: calculate_distance(row), axis=1)
+        
+        track.to_csv(args.output_directory+'/track_'+experiment+'.csv')   
+        print(args.output_directory+'/track_'+experiment+'.csv saved')
