@@ -8,7 +8,7 @@ c.retrieve(
     'reanalysis-era5-pressure-levels',
     {
         'product_type':'reanalysis',
-        'format':'grib',
+        'format':'netcdf',
         'pressure_level':[
             '1','2','3',
             '5','7','10',
@@ -32,4 +32,4 @@ c.retrieve(
             'temperature','u_component_of_wind','v_component_of_wind'
         ]
     },
-    'Catarina-2403-2903.grib')
+    'Catarina-2403-2903.nc')
