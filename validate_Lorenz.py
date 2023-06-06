@@ -103,7 +103,7 @@ def sns_heatmap(data,title):
     plt.close('all')
     if benchmarks == '48h_sst':
         y = 6
-    elif benchmarks == '72h_sst':
+    elif benchmarks in ['72h_sst', '2403-2903']:
         y = 2
     else:
         y = 10
