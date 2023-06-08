@@ -122,6 +122,8 @@ benchmarks = input("prompt experiments (24h, 48h, 48h_sst, 72h_sst): ")
 
 if (benchmarks == '48h_sst') or (benchmarks == '72h_sst'):
     ncol, nrow, imax = 2, 2, 3
+elif benchmarks = '2403-2903':
+    col, nrow, imax = 1, 1, 1
 else:
     ncol, nrow, imax = 3, 6, 18
 print('Figure will have ncols:', ncol, 'rows:', nrow, 'n:', imax)
