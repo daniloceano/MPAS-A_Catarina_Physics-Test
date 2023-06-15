@@ -11,19 +11,13 @@ import argparse
 import f90nml
 import datetime
 import itertools
-import imageio
 
 import numpy as np
 import pandas as pd
 import xarray as xr
-import cmocean.cm as cmo
-import cartopy.crs as ccrs
-import seaborn as sns
 
-import scipy.stats as st
 import skill_metrics as sm
 
-import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from metpy.calc import wind_speed
@@ -56,17 +50,6 @@ def convert_lon(df,LonIndexer):
     df.coords[LonIndexer] = (df.coords[LonIndexer] + 180) % 360 - 180
     df = df.sortby(df[LonIndexer])
     return df
-
-def anim(path,pattern):
-    filenames = glob.glob(path+pattern+'*')
-    ff=[]
-    for i in range(len(filenames)):
-    	ff.append(filenames[i].split('/')[-1].split('.')[0])
-    
-    with imageio.get_writer(path+'/wind.mp4',fps=5) as writer:
-        for filename in filenames:
-            image = imageio.imread(filename)
-            writer.append_data(image)
 
 def get_times_nml(namelist,model_data):
     ## Identify time range of simulation using namelist ##
@@ -129,13 +112,14 @@ group.add_argument('-q','--quickscat', type=str, default=None,
 group.add_argument('-e','--ERA5', type=str, default=None,
                         help='''path to ERA5 data''')
 
-args = parser.parse_args()
+# args = parser.parse_args()
+args = parser.parse_args(['-bdir','/p1-nemo/danilocs/mpas/MPAS-BR/benchmarks/Catarina_physics-test/Catarina_250-8km.best-physics_sst_ext/',
+                          '-q','/p1-nemo/danilocs/mpas/MPAS-BR/met_data/QUICKSCAT/Catarina_20040321-20040323_v11l30flk.nc'])
 
 benchmarks_experiment = input("prompt experiments (24h, 48h, 48h_sst): ")
 
 ## Start the code ##
-# benchs = glob.glob(args.bench_directory+'/run*')
-benchs = glob.glob(args.bench_directory+'/run*')
+benchs = glob.glob(f"{args.bench_directory}/run*")
 # Dummy for getting model times
 model_output = benchs[0]+'/latlon.nc'
 namelist_path = benchs[0]+"/namelist.atmosphere"
@@ -204,78 +188,6 @@ for benchmark in benchmarks:
         data[exp_name][model_var].update(
             {metric: statistical_metrics[metric][1] 
              for metric in statistical_metrics.keys()})
-    
-
-# # =============================================================================
-# # Make gif
-# # =============================================================================
-# print('\nPlotting maps...')
-# datacrs = ccrs.PlateCarree()
-
-# levels = np.arange(0,30,2)
-# skip = (slice(None, None, 2), slice(None, None, 2))
-
-# for t in times:
-#     plt.close('all')
-#     fig = plt.figure(figsize=(10, 12))
-#     gs = gridspec.GridSpec(6, 3)
-#     print('\n',t)
-#     i = 0
-#     for col in range(3):
-#         for row in range(6):
-#             bench = benchs[i]
-#             benchmark_data = BenchData(bench)
-#             experiment = benchmark_data.get_exp_name()
-            
-#             u = data[experiment]['u10']['data'].sel(Time=t)
-#             v = data[experiment]['v10']['data'].sel(Time=t)
-#             windspeed = data[experiment]['windspeed']['data'].sel(Time=t)
-            
-                
-#             ax = fig.add_subplot(gs[row, col], projection=datacrs,frameon=True)
-            
-#             ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
-#             gl = ax.gridlines(draw_labels=True,zorder=2,linestyle='dashed',
-#                               alpha=0.8, color='#383838')
-#             gl.xlabel_style = {'size': 12, 'color': '#383838'}
-#             gl.ylabel_style = {'size': 12, 'color': '#383838'}
-#             gl.right_labels = None
-#             gl.top_labels = None
-#             if row != 5:
-#                 gl.bottom_labels = None
-#             if col != 0:
-#                 gl.left_labels = None
-        
-#             ax.text(-50,-19,experiment)
-            
-#             cf = ax.contourf(windspeed.longitude, windspeed.latitude, windspeed,
-#                               cmap='rainbow', levels=levels)
-        
-#             # ax.quiver(u.longitude[::20], u.latitude[::20],
-#             #           u[::20,::20], v[::20,::20], width=0.025,headaxislength=3.5)
-#             ax.streamplot(u.longitude[::20].values, u.latitude[::20].values,
-#                           u[::20,::20].values, v[::20,::20].values, color='k')
-            
-#             ax.coastlines(zorder = 1)
-#         i += 1
-    
-#     cb_axes = fig.add_axes([0.85, 0.18, 0.04, 0.6])
-#     fig.colorbar(cf, cax=cb_axes, orientation="vertical") 
-#     fig.subplots_adjust(wspace=0.1,hspace=0, right=0.8)
-    
-#     if args.output is not None:
-#         fname = args.output
-#     else:
-#         fname = (args.bench_directory).split('/')[-2].split('.nc')[0]
-#     fname1 = fname+'_wind-maps'
-    
-#     time_string = t.strftime("%d-%HZ")
-#     fname = './Figures_48h/wind/wind-test'+'_'+time_string+'.png'
-    
-#     fig.savefig(fname, dpi=500)
-#     print(fname,'saved')
-    
-#     anim('./Figures_48h/wind/','wind-test')
     
 # =============================================================================
 # Plot Taylor Diagrams and do Statistics ##
