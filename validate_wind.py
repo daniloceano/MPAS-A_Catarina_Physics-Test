@@ -68,36 +68,20 @@ def get_times_nml(namelist,model_data):
     return times
 
 def plot_taylor(sdevs,crmsds,ccoefs,experiments):
-    '''
-    Produce the Taylor diagram
-    Label the points and change the axis options for SDEV, CRMSD, and CCOEF.
-    Increase the upper limit for the SDEV axis and rotate the CRMSD contour 
-    labels (counter-clockwise from x-axis). Exchange color and line style
-    choices for SDEV, CRMSD, and CCOEFF variables to show effect. Increase
-    the line width of all lines.
-    For an exhaustive list of options to customize your diagram, 
-    please call the function at a Python command line:
-    >> taylor_diagram
-    '''
-    # Set the figure properties (optional)
     rcParams.update({'font.size': 14}) # font size of axes text
-    STDmax = round(np.amax(sdevs))
-    RMSmax = round(np.amax(crmsds))
-    tickRMS = np.linspace(0,round(RMSmax*1.2,1),6)
-    axismax = round(STDmax*1.2,1)
     sm.taylor_diagram(sdevs,crmsds,ccoefs,
                       markerLabelColor = 'b', 
                       markerLabel = experiments,
                       markerColor = 'r', markerLegend = 'on', markerSize = 15, 
-                      tickRMS = tickRMS, titleRMS = 'off', widthRMS = 2.0,
+                      titleRMS = 'off', widthRMS = 2.0,
                       colRMS = '#728B92', styleRMS = '--',  
                       widthSTD = 2, styleSTD = '--', colSTD = '#8A8A8A',
                       titleSTD = 'on',
                       colCOR = 'k', styleCOR = '-',
                       widthCOR = 1.0, titleCOR = 'off',
                       colObs = 'k', markerObs = '^',
-                      titleOBS = 'IMERG', styleObs =':',
-                      axismax = axismax, alpha = 1)
+                      titleOBS = 'QUICKSCAT', styleObs =':',
+                      alpha = 1)
 
 ## Parser options ##
 parser = argparse.ArgumentParser()
