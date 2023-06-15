@@ -2,3 +2,4 @@
 files/
 **/*.nc
 **/*.grb
+.vscode/launch.json

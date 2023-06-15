@@ -112,9 +112,9 @@ group.add_argument('-q','--quickscat', type=str, default=None,
 group.add_argument('-e','--ERA5', type=str, default=None,
                         help='''path to ERA5 data''')
 
-# args = parser.parse_args()
-args = parser.parse_args(['-bdir','/p1-nemo/danilocs/mpas/MPAS-BR/benchmarks/Catarina_physics-test/Catarina_250-8km.best-physics_sst_ext/',
-                          '-q','/p1-nemo/danilocs/mpas/MPAS-BR/met_data/QUICKSCAT/Catarina_20040321-20040323_v11l30flk.nc'])
+args = parser.parse_args()
+# args = parser.parse_args(['-bdir','/p1-nemo/danilocs/mpas/MPAS-BR/benchmarks/Catarina_physics-test/Catarina_250-8km.best-physics_sst_ext/',
+#                           '-q','/p1-nemo/danilocs/mpas/MPAS-BR/met_data/QUICKSCAT/Catarina_20040321-20040323_v11l30flk.nc'])
 
 benchmarks_experiment = input("prompt experiments (24h, 48h, 48h_sst): ")
 
