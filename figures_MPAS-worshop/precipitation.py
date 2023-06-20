@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/06/20 11:48:29 by Danilo            #+#    #+#              #
-#    Updated: 2023/06/20 16:12:31 by Danilo           ###   ########.fr        #
+#    Updated: 2023/06/20 16:17:15 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -76,7 +76,10 @@ parser.add_argument('-i','--imerg', type=str, default=None, required=True,
 parser.add_argument('-o','--output', type=str, default=None,
                         help='''output name to append file''')
 
-args = parser.parse_args()
+#args = parser.parse_args()
+
+args = parser.parse_args(['-bdir', '/p1-nemo/danilocs/mpas/MPAS-BR/benchmarks/Catarina_physics-test/Catarina_250-8km.best-physics_sst/',
+                           '-i', '/p1-nemo/danilocs/mpas/MPAS-BR/met_data/IMERG/IMERG_20040321-20040325.nc'])
 
 benchmarks = input("prompt experiments (24h, 48h, 48h_sst, 72h_sst, '2403-2903'): ")
 
