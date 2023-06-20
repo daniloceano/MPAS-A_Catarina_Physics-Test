@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/06/20 11:48:29 by Danilo            #+#    #+#              #
-#    Updated: 2023/06/20 16:17:15 by Danilo           ###   ########.fr        #
+#    Updated: 2023/06/20 16:34:45 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -152,9 +152,14 @@ gs1 = gridspec.GridSpec(6, 3)
 gs2 = gridspec.GridSpec(6, 3)
 datacrs = ccrs.PlateCarree()
 
-prec_levels = np.arange(0,375,25)
-bias_levels = np.arange(-200,225,25)
-bias_norm = colors.TwoSlopeNorm(vmin=-200, vcenter=0, vmax=200)
+if (benchmarks == '48h_sst'):
+    prec_levels = np.arange(0,375,25)
+    bias_levels = np.arange(-200,225,25)
+    bias_norm = colors.TwoSlopeNorm(vmin=-200, vcenter=0, vmax=200)
+elif (benchmarks == '72h_sst'):
+    prec_levels = np.arange(0,475,25)
+    bias_levels = np.arange(-250,275,25)
+    bias_norm = colors.TwoSlopeNorm(vmin=-250, vcenter=0, vmax=250)
 
 i = 0
 for col in range(ncol):
