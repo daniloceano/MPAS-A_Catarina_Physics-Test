@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/06/20 11:48:29 by Danilo            #+#    #+#              #
-#    Updated: 2023/06/20 16:34:45 by Danilo           ###   ########.fr        #
+#    Updated: 2023/06/20 16:45:19 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -157,9 +157,9 @@ if (benchmarks == '48h_sst'):
     bias_levels = np.arange(-200,225,25)
     bias_norm = colors.TwoSlopeNorm(vmin=-200, vcenter=0, vmax=200)
 elif (benchmarks == '72h_sst'):
-    prec_levels = np.arange(0,475,25)
-    bias_levels = np.arange(-250,275,25)
-    bias_norm = colors.TwoSlopeNorm(vmin=-250, vcenter=0, vmax=250)
+    prec_levels = np.arange(0,450,25)
+    bias_levels = np.arange(-300,275,25)
+    bias_norm = colors.TwoSlopeNorm(vmin=-300, vcenter=0, vmax=225)
 
 i = 0
 for col in range(ncol):
