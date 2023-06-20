@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/06/20 11:48:29 by Danilo            #+#    #+#              #
-#    Updated: 2023/06/20 12:47:49 by Danilo           ###   ########.fr        #
+#    Updated: 2023/06/20 14:13:17 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -149,8 +149,8 @@ gs1 = gridspec.GridSpec(6, 3)
 gs2 = gridspec.GridSpec(6, 3)
 datacrs = ccrs.PlateCarree()
 
-prec_levels = np.arange(0,300,25)
-bias_levels = np.arange(-200,200,25)
+prec_levels = np.arange(0,375,25)
+bias_levels = np.arange(-200,225,25)
 bias_norm = colors.TwoSlopeNorm(vmin=-200, vcenter=0, vmax=200)
 
 i = 0
@@ -174,8 +174,8 @@ for col in range(ncol):
             ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
             gl = ax.gridlines(draw_labels=True,zorder=2,linestyle='dashed',
                               alpha=0.8, color='#383838')
-            gl.xlabel_style = {'size': 12, 'color': '#383838'}
-            gl.ylabel_style = {'size': 12, 'color': '#383838'}
+            gl.xlabel_style = {'size': 16, 'color': '#383838'}
+            gl.ylabel_style = {'size': 16, 'color': '#383838'}
             gl.right_labels = None
             gl.top_labels = None
             if row != 5:
@@ -233,8 +233,8 @@ ax = fig.add_subplot(111, projection=datacrs,frameon=True)
 ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
 gl = ax.gridlines(draw_labels=True,zorder=2,linestyle='dashed',
                   alpha=0.8, color='#383838')
-gl.xlabel_style = {'size': 12, 'color': '#383838'}
-gl.ylabel_style = {'size': 12, 'color': '#383838'}
+gl.xlabel_style = {'size': 16, 'color': '#383838'}
+gl.ylabel_style = {'size': 16, 'color': '#383838'}
 gl.right_labels = None
 gl.top_labels = None
 cf = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,
