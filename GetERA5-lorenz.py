@@ -24,7 +24,7 @@ c.retrieve(
             '925','950','975',
             '1000'
         ],
-        'date':'20040324/20040329',
+        'date':'20040321/20040323',
         'area':'-5/-50/-50/-10',
         'time':'00/to/23/by/1',
         'variable':[
@@ -32,4 +32,4 @@ c.retrieve(
             'temperature','u_component_of_wind','v_component_of_wind'
         ]
     },
-    'Catarina-2403-2903.nc')
+    'Catarina-2403-2903_ERA5.nc')
