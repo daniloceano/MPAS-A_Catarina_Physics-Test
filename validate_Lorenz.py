@@ -16,7 +16,6 @@ import seaborn as sns
 import cmocean.cm as cmo
 from matplotlib.colors import LinearSegmentedColormap
 
-era_exp_name = 'ERA5-ERA5'
 
 terms = ['Az', 'Ae', 'Kz', 'Ke',
          'Cz', 'Ca', 'Ck', 'Ce',
@@ -30,12 +29,13 @@ budget_diff_terms = ['∂Az/∂t (finite diff.)', '∂Ae/∂t (finite diff.)',
                  '∂Kz/∂t (finite diff.)', '∂Ke/∂t (finite diff.)']
 budget_diff_renamed = ['∂Az/∂t', '∂Ae/∂t',
                  '∂Kz/∂t', '∂Ke/∂t']
-
 main_terms = ['Az', 'Ae', 'Kz', 'Ke', 'Ca', 'Ce', 'Ck', 'Ge']
 
-benchmarks = input("prompt experiments (24h, 48h, 48h_sst, 72h_sst): ")
 
-results_ERA = pd.read_csv('./LEC_Results_'+benchmarks+'/ERA5-ERA5/ERA5-ERA5.csv')
+benchmarks = input("prompt experiments (24h, 48h, 48h_sst, 72h_sst): ")
+results = glob.glob('LEC_Results_'+benchmarks+'/*')
+
+results_ERA = pd.read_csv(glob.glob(f'./LEC_Results_{benchmarks}/*ERA5*/*ERA5*.csv')[0])
 
 DiscreteColors = ['#58A8D6', '#74D669', '#D6BF5A', '#D6713A', '#D63631']
     
@@ -119,8 +119,6 @@ def normalize_df(df):
     return (df-df.min())/(df.max()-df.min())
    
 
-results = glob.glob('LEC_Results_'+benchmarks+'/*')
-results_ERA = pd.read_csv('./LEC_Results_'+benchmarks+'/ERA5-ERA5/ERA5-ERA5.csv')
 exps = []
 for exp in results:
     if 'ERA5-ERA5' not in exp:
