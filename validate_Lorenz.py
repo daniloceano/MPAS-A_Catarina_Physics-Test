@@ -31,12 +31,6 @@ budget_diff_renamed = ['∂Az/∂t', '∂Ae/∂t',
                  '∂Kz/∂t', '∂Ke/∂t']
 main_terms = ['Az', 'Ae', 'Kz', 'Ke', 'Ca', 'Ce', 'Ck', 'Ge']
 
-
-benchmarks = input("prompt experiments (24h, 48h, 48h_sst, 72h_sst): ")
-results = glob.glob('LEC_Results_'+benchmarks+'/*')
-
-results_ERA = pd.read_csv(glob.glob(f'./LEC_Results_{benchmarks}/*ERA5*/*ERA5*.csv')[0])
-
 DiscreteColors = ['#58A8D6', '#74D669', '#D6BF5A', '#D6713A', '#D63631']
     
 def get_rsme_r(results, results_ERA):
@@ -118,10 +112,15 @@ def sns_heatmap(data,title):
 def normalize_df(df):
     return (df-df.min())/(df.max()-df.min())
    
+benchmarks = input("prompt experiments (24h, 48h, 48h_sst, 72h_sst): ")
+
+results = glob.glob('LEC_Results_'+benchmarks+'/*')
+
+results_ERA = pd.read_csv(glob.glob(f'./LEC_Results_{benchmarks}/*ERA5*/*ERA5*.csv')[0])
 
 exps = []
 for exp in results:
-    if 'ERA5-ERA5' not in exp:
+    if 'ERA5' not in exp:
         exps.append(exp.split('/')[1].split('_MPAS_track')[0])
 
 df_rmse_all, df_corrcoef_all = get_rsme_r(results, results_ERA)
