@@ -4,3 +4,4 @@ files/
 **/*.grb
 .vscode/launch.json
 src/nohup.out
+src/.vscode/launch.json
