@@ -339,7 +339,7 @@ if __name__ == '__main__':
     figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks}')
     tracks_figures_directory = os.path.join(figures_directory, 'tracks')
     stats_directory = os.path.join(experiment_directory, f'stats_{benchmarks}')
-    for directory in [figures_directory, tracks_figures_directory, stats_directory, stats_directory]:
+    for directory in [figures_directory, tracks_figures_directory, stats_directory]:
         if not os.path.exists(directory):
             os.makedirs(directory)
 

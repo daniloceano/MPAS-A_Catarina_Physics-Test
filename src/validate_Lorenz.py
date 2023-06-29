@@ -5,7 +5,7 @@ Created on Fri Dec 30 13:23:07 2022
 
 @author: danilocoutodsouza
 """
-
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import glob
@@ -33,15 +33,13 @@ main_terms = ['Az', 'Ae', 'Kz', 'Ke', 'Ca', 'Ce', 'Ck', 'Ge']
 
 DiscreteColors = ['#58A8D6', '#74D669', '#D6BF5A', '#D6713A', '#D63631']
     
-def get_rsme_r(results, results_ERA):
+def get_rsme_r(results_directory, results_ERA):
 
     df_exp_dict = {}
     rmse_dict, corrcoef_dict = {}, {}
     for exp in exps:
         dirname = exp.split('/')[-1]
-        outfile = glob.glob(
-            './LEC_Results_'+benchmarks+'/'+str(dirname)+'*'+'/'+str(dirname
-                                                                )+'*csv')[0]
+        outfile = glob.glob(f'{results_directory}/{dirname}*/{dirname}*csv')[0]
         df_exp = pd.read_csv(outfile, index_col=[0])
         df_exp['Datetime'] = pd.to_datetime(df_exp.Date) + pd.to_timedelta(
             df_exp.Hour, unit='h')
@@ -80,7 +78,7 @@ def get_rsme_r(results, results_ERA):
         
     return df_rmse, df_corrcoef
 
-def sns_heatmap(data,title):
+def sns_heatmap(data,title, figures_directory):
      
     if 'RMSE_Normalised' in title:
         cmap = LinearSegmentedColormap.from_list('Custom',
@@ -95,7 +93,7 @@ def sns_heatmap(data,title):
             cmap = cmo.matter_r
     
     plt.close('all')
-    if benchmarks == '48h_sst':
+    if '48h' in benchmarks:
         y = 6
     elif benchmarks in ['72h_sst', '2403-2903']:
         y = 2
@@ -107,30 +105,44 @@ def sns_heatmap(data,title):
 
     plt.title(title)
     plt.tight_layout()
-    f.savefig('Figures_'+benchmarks+'/stats_Lorenz/'+title)
+    stats_figure_directory = f'{figures_directory}/stats_Lorenz/'
+    if not os.path.exists(stats_figure_directory):
+            os.makedirs(stats_figure_directory)
+    f.savefig(f'{stats_figure_directory}/{title}')
     
 def normalize_df(df):
     return (df-df.min())/(df.max()-df.min())
    
-benchmarks = input("prompt experiments (24h, 48h, 48h_sst, 72h_sst): ")
+# results_directory = input("prompt path to tracks: ")
+results_directory = '../experiments_48h/LEC_Results_48h_pbl/'
+experiment_directory = ('/').join(os.path.dirname(results_directory).split('/')[:-1])
+benchmarks = os.path.basename(os.path.dirname(results_directory)).split('LEC_Results_')[1]
 
-results = glob.glob('LEC_Results_'+benchmarks+'/*')
+stats_directory = os.path.join(experiment_directory, f'stats_{benchmarks}')
+figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks}')
+lec_directory = os.path.join(experiment_directory, f'LEC_Results_{benchmarks}')
 
-results_ERA = pd.read_csv(glob.glob(f'./LEC_Results_{benchmarks}/*ERA5*/*ERA5*.csv')[0])
+for directory in [figures_directory, stats_directory]:
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+results = glob.glob(f'{lec_directory}/*')
+        
+results_ERA = pd.read_csv(glob.glob(f'{results_directory}/*ERA5*/*ERA5*.csv')[0])
 
 exps = []
 for exp in results:
     if 'ERA5' not in exp:
-        exps.append(exp.split('/')[1].split('_MPAS_track')[0])
+        exps.append(os.path.basename(exp).split('_')[0])
 
-df_rmse_all, df_corrcoef_all = get_rsme_r(results, results_ERA)
+df_rmse_all, df_corrcoef_all = get_rsme_r(results_directory, results_ERA)
 
 df_rmse_main = df_rmse_all[main_terms]
 df_corrcoef_main = df_corrcoef_all[main_terms]
 
 # make a csv with normalised values for comparing with other terms
 df_rmse_main_norm = normalize_df(df_rmse_main).sort_index(ascending=True)
-df_rmse_main_norm.to_csv('./stats-'+benchmarks+'/Lorenz-main_RMSE_normalised.csv')
+df_rmse_main_norm.to_csv(f'{stats_directory}/Lorenz-main_RMSE_normalised.csv')
 
 for df_rmse, df_corrcoef in zip([df_rmse_all, df_rmse_main],
                                 [df_corrcoef_all, df_corrcoef_main]):
@@ -169,7 +181,7 @@ for df_rmse, df_corrcoef in zip([df_rmse_all, df_rmse_main],
                             rmse_norm, df_corrcoef, corrcoef_norm],
                            ['RMSE_energy', 'RMSE', 'RMSE_Normalised',
                             'R', 'R_Normalised']):
-        sns_heatmap(data,title+'_'+fname)
+        sns_heatmap(data, f'{title}_{fname}', figures_directory)
     
     
     rmse_vals = np.arange(0,1,0.05)
