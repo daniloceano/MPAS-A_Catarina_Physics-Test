@@ -38,10 +38,18 @@ def get_experiment_name(bench):
     Returns:
         str: Experiment name.
     """
-    expname = bench.split('/')[-1].split('run.')[-1]
-    microp = expname.split('.')[0].split('_')[-1]
-    cumulus = expname.split('.')[-1].split('_')[-1] 
-    return microp+'_'+cumulus
+    full_name = os.path.basename(bench)
+    if len(full_name.split('.')) == 4:
+        _, experiment, mp, cu = full_name.split('.')
+    elif len(full_name.split('.')) == 5:
+        _, experiment, mp, cu, bl = full_name.split('.')
+        bl = pbl.split('bl_')[1]
+    mp = mp.split('mp_')[1]
+    cu = cu.split('cu_')[1]
+    if bl:
+        return '_'.join([mp, cu, bl])
+    else:
+        return '_'.join([mp, cu])
 
 def get_simulation_times(namelist,model_data):
     """
@@ -185,11 +193,11 @@ def main():
     parser.add_argument('-e','--ERA5', type=str, default=None,
                             help='''wether to validade with ERA5 data''')
     
-    # args = parser.parse_args()
+    args = parser.parse_args()
 
-    args = parser.parse_args(['-bdir', '/p1-nemo/danilocs/mpas/MPAS-BR/benchmarks/Catarina_physics-test/Catarina_250-8km.physics-pbl_sst/',
-                              '-e', '/p1-nemo/danilocs/mpas/MPAS-BR/met_data/ERA5/DATA/2004/Catarina-PhysicsTest_ERA5.grib',
-                              '-odir', '../experiments_48h/tracks_48h_pbl'])
+    # args = parser.parse_args(['-bdir', '/p1-nemo/danilocs/mpas/MPAS-BR/benchmarks/Catarina_physics-test/Catarina_250-8km.physics-pbl_sst/',
+    #                           '-e', '/p1-nemo/danilocs/mpas/MPAS-BR/met_data/ERA5/DATA/2004/Catarina-PhysicsTest_ERA5.grib',
+    #                           '-odir', '../experiments_48h/tracks_48h_pbl'])
 
     # Validate inputs
     if not os.path.isdir(args.bench_directory):
