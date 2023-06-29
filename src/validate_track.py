@@ -329,8 +329,8 @@ def normalize_df(df):
         
 if __name__ == '__main__':
 
-    # tracks_directory = input("prompt path to tracks: ")
-    tracks_directory = '../experiments_48h/tracks_48h_pbl/'
+    tracks_directory = input("prompt path to tracks: ")
+    # tracks_directory = '../experiments_48h/tracks_48h_pbl/'
     experiment_directory = ('/').join(os.path.dirname(tracks_directory).split('/')[:-1])
     benchmarks = os.path.basename(os.path.dirname(tracks_directory)).split('tracks_')[1]
     
