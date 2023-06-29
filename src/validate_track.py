@@ -31,6 +31,8 @@ lines = {'ERA':'solid', 'wsm6':'dashed','thompson':'dashdot',
          'kessler':(0, (3, 1, 1, 1)),'off':(0, (3, 1, 1, 1, 1, 1)),
          'Cowan':'solid'}
 
+lines_bl = {'ERA':'solid', 'Cowan':'solid', 'ysu':'dashed', 'mynn':'dashdot'}
+
 markers = {'ERA':'s', 'wsm6':'x', 'thompson':'P','kessler':'D','off':'^',
            'Cowan':'o'}
 
@@ -92,22 +94,32 @@ def tracks_one_image(tracks, tracks_directory, figures_directory):
         
         
         if exp == 'ERA5':
-            microp, cumulus = 'ERA', 'ERA'
+            microp, cumulus, bl = 'ERA', 'ERA', 'ERA'
             zorder=100
             
         elif exp == 'Cowan':
-            microp, cumulus = 'Cowan', 'Cowan'
+            microp, cumulus, bl = 'Cowan', 'Cowan', 'Cowan'
             zorder=101
             
         else:
-            microp, cumulus = exp.split('_')[0], exp.split('_')[1]
+            if any(substring in exp for substring in ['ysu', 'mynn']):
+                if 'freitas' in exp:
+                    microp, _, cumulus, bl = exp.split('_')
+                else:
+                    microp, cumulus, bl = exp.split('_')
+            else:
+                microp, cumulus = exp.split('_')[0], exp.split('_')[1]
+                bl = None
             zorder=1
-        ls = lines[microp]
+
+        if bl:
+            ls = lines_bl[bl]
+        else:
+            ls = lines[microp]
+
         marker = markers[microp]
         color = colors[cumulus]
-        
-        print(color)
-    
+            
         ax.plot(lons ,lats, markeredgecolor=color, marker=marker, zorder=zorder,
                     markerfacecolor='None', linewidth=1.5, linestyle=ls,
                     c=color, label=exp)
@@ -189,11 +201,14 @@ def tracks_subplots(tracks, tracks_dir, figures_directory):
     plt.savefig(fname+'.png', dpi=500)
     print(fname+'.png created!')
 
-def minimum_slp_and_distance(tracks, directory):
+def minimum_slp_and_distance(tracks, tracks_directory, tracks_figures_directory, track_stats_directory):
+    
     print('plotting minimum SLP..')
     plt.close('all')
+
     fig1 = plt.figure(figsize=(15, 12))
     fig2 = plt.figure(figsize=(15, 12))
+
     ax1 = fig1.add_subplot(1, 1, 1)
     ax2 = fig2.add_subplot(1, 1, 1)
     
@@ -202,13 +217,12 @@ def minimum_slp_and_distance(tracks, directory):
     mins = {}
     
     track_dummy = pd.read_csv(tracks[0], index_col=0)
-    track_Cowan = pd.read_csv('tracks_'+benchmarks+'/track_Cowan.csv', index_col=0)
-    track_Cowan_sliced = track_Cowan.loc[
-        slice(track_dummy.index[0],track_dummy.index[-1])]
+    track_Cowan = pd.read_csv(f'{tracks_directory}/track_Cowan.csv', index_col=0)
+    track_Cowan_sliced = track_Cowan.loc[slice(track_dummy.index[0],track_dummy.index[-1])]
     
     for trackfile in tracks:   
         
-        exp = trackfile.split('/')[1].split('.csv')[0].split('track_')[1]
+        exp = os.path.basename(trackfile).split('.csv')[0].split('track_')[1]
         print(exp)
         
         track = pd.read_csv(trackfile, index_col=0)    
@@ -220,16 +234,12 @@ def minimum_slp_and_distance(tracks, directory):
         print('data range:',min_slp.min(),'to',min_slp.max())
         
         if exp == 'ERA5':
-            microp, cumulus = 'ERA', 'ERA'
-            zorder=100
+            microp, cumulus, bl, zorder = 'ERA', 'ERA', 'ERA', 100
             
         elif exp == 'Cowan':
-            microp, cumulus = 'Cowan', 'Cowan'
-            zorder=101
-            
+            microp, cumulus, bl, zorder = 'Cowan', 'Cowan', 'Cowan', 101
+
         else:
-            microp, cumulus = exp.split('_')[0], exp.split('_')[1]
-            
             distance = track['distance']
             mean_dist = distance.mean()
             std_dist = distance.std()
@@ -238,33 +248,49 @@ def minimum_slp_and_distance(tracks, directory):
             distances[exp] = distance
             
             zorder=1
-            
-        ls = lines[microp]
+
+            if any(substring in exp for substring in ['ysu', 'mynn']):
+                if 'freitas' in exp:
+                    microp, _, cumulus, bl = exp.split('_')
+                else:
+                    microp, cumulus, bl = exp.split('_')
+            else:
+                microp, cumulus = exp.split('_')[0], exp.split('_')[1]
+                bl = None
+            zorder=1
+
+        if bl:
+            ls = lines_bl[bl]
+        else:
+            ls = lines[microp]
+
         marker = markers[microp]
         color = colors[cumulus]
         
         ax1.plot(time,min_slp, markeredgecolor=color, marker=marker,
                     markerfacecolor='None', linewidth=1.5, linestyle=ls,
                     c=color, label=exp, zorder=zorder)
+        
         if exp != 'Cowan' and exp !='ERA5':
             ax2.plot(time, distance, markeredgecolor=color, marker=marker,
                         markerfacecolor='None', linewidth=1.5, linestyle=ls,
                         c=color, label=exp, zorder=zorder)
         
     df = pd.DataFrame(stats, index=['mean_dist','std']).T
-    df.to_csv('stats-'+benchmarks+'/distances.csv')
+
+    df.to_csv(os.path.join(track_stats_directory, 'distances.csv'))
     
     df_dist = pd.DataFrame.from_dict(distances)
     df_min = pd.DataFrame.from_dict(mins)
     
-    fname3 = directory+'min-slp'
-    fname4 = directory+'distance-timeseries'
+    fname3 = os.path.join(tracks_figures_directory, 'min-slp.png')
+    fname4 = os.path.join(tracks_figures_directory, 'distance-timeseries.png')
     for fname, ax, fig in zip([fname3, fname4], [ax1, ax2], [fig1, fig2]):
         legend1, legend2 = make_legend(colors,markers,lines, ax)
         ax.add_artist(legend1)
         ax.add_artist(legend2)
-        fig.savefig(fname+'.png', dpi=500)
-        print(fname+'.png created!')
+        fig.savefig(fname, dpi=500)
+        print(fname+' created!')
     
     return df_dist, df_min
 
@@ -305,22 +331,32 @@ if __name__ == '__main__':
 
     # tracks_directory = input("prompt path to tracks: ")
     tracks_directory = '../experiments_48h/tracks_48h_pbl/'
-    experiment_directory = os.path.dirname(tracks_directory)
-    benchmarks = os.path.basename(experiment_directory).split('tracks_')[1]
+    experiment_directory = ('/').join(os.path.dirname(tracks_directory).split('/')[:-1])
+    benchmarks = os.path.basename(os.path.dirname(tracks_directory)).split('tracks_')[1]
     
     tracks = glob.glob(f'{tracks_directory}/*csv')
-    figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks}', 'tracks')
-    tracks_one_image(tracks, tracks_directory, figures_directory)
+
+    figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks}')
+    tracks_figures_directory = os.path.join(figures_directory, 'tracks')
+    stats_directory = os.path.join(experiment_directory, f'stats_{benchmarks}')
+    track_stats_directory = os.path.join(stats_directory, 'tracks')
+    for directory in [figures_directory, tracks_figures_directory, stats_directory, track_stats_directory]:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+    tracks_one_image(tracks, tracks_directory, tracks_figures_directory)
     if benchmarks in ['48h_sst', '24h'] :
-        tracks_subplots(tracks, tracks_directory, figures_directory)
+        tracks_subplots(tracks, tracks_directory, tracks_figures_directory)
     
-    df_dist, df_min = minimum_slp_and_distance(tracks, figures_directory)
-    bar_plot_distances(df_dist, figures_directory+'barplot-distances.png')
-    bar_plot_distances(df_min.drop(columns='Cowan'), figures_directory+'barplot-min-slp.png')
+    df_dist, df_min = minimum_slp_and_distance(tracks, tracks_directory,
+                                                tracks_figures_directory, track_stats_directory)
+    bar_plot_distances(df_dist, os.path.join(tracks_figures_directory, 'barplot-distances.png'))
+    bar_plot_distances(df_min.drop(columns='Cowan'),
+                        os.path.join(tracks_figures_directory, 'barplot-min-slp.png'))
     
     dist_mean_norm = normalize_df(df_dist.mean()).sort_index(ascending=True)
     slp_mean_norm = normalize_df(df_min.drop(columns='Cowan').mean()).sort_index(ascending=True)
     
     stats = pd.DataFrame(dist_mean_norm, columns=['distance'])
     stats['minimum presure'] = slp_mean_norm
-    stats.to_csv('./stats-'+benchmarks+'/distance_min-slp_normalised.csv')
+    stats.to_csv(os.path.join(track_stats_directory, 'distance_min-slp_normalised.csv'))
