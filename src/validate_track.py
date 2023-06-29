@@ -201,7 +201,7 @@ def tracks_subplots(tracks, tracks_dir, figures_directory):
     plt.savefig(fname+'.png', dpi=500)
     print(fname+'.png created!')
 
-def minimum_slp_and_distance(tracks, tracks_directory, tracks_figures_directory, track_stats_directory):
+def minimum_slp_and_distance(tracks, tracks_directory, tracks_figures_directory, stats_directory):
     
     print('plotting minimum SLP..')
     plt.close('all')
@@ -278,7 +278,7 @@ def minimum_slp_and_distance(tracks, tracks_directory, tracks_figures_directory,
         
     df = pd.DataFrame(stats, index=['mean_dist','std']).T
 
-    df.to_csv(os.path.join(track_stats_directory, 'distances.csv'))
+    df.to_csv(os.path.join(stats_directory, 'distances.csv'))
     
     df_dist = pd.DataFrame.from_dict(distances)
     df_min = pd.DataFrame.from_dict(mins)
@@ -339,8 +339,7 @@ if __name__ == '__main__':
     figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks}')
     tracks_figures_directory = os.path.join(figures_directory, 'tracks')
     stats_directory = os.path.join(experiment_directory, f'stats_{benchmarks}')
-    track_stats_directory = os.path.join(stats_directory, 'tracks')
-    for directory in [figures_directory, tracks_figures_directory, stats_directory, track_stats_directory]:
+    for directory in [figures_directory, tracks_figures_directory, stats_directory, stats_directory]:
         if not os.path.exists(directory):
             os.makedirs(directory)
 
@@ -349,7 +348,7 @@ if __name__ == '__main__':
         tracks_subplots(tracks, tracks_directory, tracks_figures_directory)
     
     df_dist, df_min = minimum_slp_and_distance(tracks, tracks_directory,
-                                                tracks_figures_directory, track_stats_directory)
+                                                tracks_figures_directory, stats_directory)
     bar_plot_distances(df_dist, os.path.join(tracks_figures_directory, 'barplot-distances.png'))
     bar_plot_distances(df_min.drop(columns='Cowan'),
                         os.path.join(tracks_figures_directory, 'barplot-min-slp.png'))
@@ -359,4 +358,4 @@ if __name__ == '__main__':
     
     stats = pd.DataFrame(dist_mean_norm, columns=['distance'])
     stats['minimum presure'] = slp_mean_norm
-    stats.to_csv(os.path.join(track_stats_directory, 'distance_min-slp_normalised.csv'))
+    stats.to_csv(os.path.join(stats_directory, 'distance_min-slp_normalised.csv'))
