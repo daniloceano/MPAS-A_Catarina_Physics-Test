@@ -43,7 +43,7 @@ def get_experiment_name(bench):
         _, experiment, mp, cu = full_name.split('.')
     elif len(full_name.split('.')) == 5:
         _, experiment, mp, cu, bl = full_name.split('.')
-        bl = pbl.split('bl_')[1]
+        bl = bl.split('bl_')[1]
     mp = mp.split('mp_')[1]
     cu = cu.split('cu_')[1]
     if bl:

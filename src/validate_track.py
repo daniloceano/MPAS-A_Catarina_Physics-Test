@@ -5,7 +5,7 @@ Created on Wed Feb  8 09:52:10 2023
 
 @author: daniloceano
 """
-
+import os
 import glob
 
 import pandas as pd
@@ -33,6 +33,8 @@ lines = {'ERA':'solid', 'wsm6':'dashed','thompson':'dashdot',
 
 markers = {'ERA':'s', 'wsm6':'x', 'thompson':'P','kessler':'D','off':'^',
            'Cowan':'o'}
+
+datacrs = ccrs.PlateCarree()
 
 def initialize_map(ax, row, col, datacrs):
     ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
@@ -64,7 +66,7 @@ def make_legend(colors,markers,lines, ax):
                             bbox_to_anchor=(1.11, 0.1))
     return legend1, legend2    
 
-def tracks_one_image(tracks, directory):
+def tracks_one_image(tracks, tracks_directory, figures_directory):
     plt.close('all')
     fig = plt.figure(figsize=(15, 12))
     
@@ -73,13 +75,15 @@ def tracks_one_image(tracks, directory):
     
     track_dummy = pd.read_csv(tracks[0], index_col=0)
     
-    track_Cowan = pd.read_csv('tracks_'+benchmarks+'/track_Cowan.csv', index_col=0)
+    track_Cowan = pd.read_csv(f'{tracks_directory}/track_Cowan.csv', index_col=0)
     track_Cowan_sliced = track_Cowan.loc[
         slice(track_dummy.index[0],track_dummy.index[-1])]
     
     for trackfile in tracks:   
         
-        exp = trackfile.split('/')[1].split('.csv')[0].split('track_')[1]
+        exp = os.path.basename(trackfile).split('.csv')[0].split('track_')[1]
+        if 'sst' in exp:
+            exp = exp.split('sst_')[1]
         print(exp)
         
         track = pd.read_csv(trackfile, index_col=0)
@@ -116,11 +120,11 @@ def tracks_one_image(tracks, directory):
     ax.add_artist(legend1)
     ax.add_artist(legend2)
     
-    fname = directory+'tracks'
-    fig.savefig(fname+'.png', dpi=500)
-    print(fname+'.png created!')
+    fname = os.path.join(figures_directory, 'tracks.png')
+    fig.savefig(fname, dpi=500)
+    print(f'{fname} created!')
     
-def tracks_subplots(tracks, directory):
+def tracks_subplots(tracks, tracks_dir, figures_directory):
     
     tracks = [elem for elem in tracks if 'ERA5' not in elem]
     tracks = [elem for elem in tracks if 'Cowan' not in elem]
@@ -129,9 +133,9 @@ def tracks_subplots(tracks, directory):
     fig = plt.figure(figsize=(10, 13))
     gs = gridspec.GridSpec(6, 3)
     
-    track_era = pd.read_csv('tracks_'+benchmarks+'/track_ERA5.csv', index_col=0)
+    track_era = pd.read_csv(f'{tracks_dir}/track_ERA5.csv', index_col=0)
     
-    track_Cowan = pd.read_csv('tracks_'+benchmarks+'/track_Cowan.csv', index_col=0)
+    track_Cowan = pd.read_csv(f'{tracks_dir}/track_Cowan.csv', index_col=0)
     track_Cowan_sliced = track_Cowan.loc[
         slice(track_era.index[0],track_era.index[-1])]
     lons_cowan, lats_cowan = track_Cowan_sliced.lon, track_Cowan_sliced.lat
@@ -181,7 +185,7 @@ def tracks_subplots(tracks, directory):
             i+=1
             
             
-    fname = directory+'tracks_multipanel'
+    fname = figures_directory+'tracks_multipanel'
     plt.savefig(fname+'.png', dpi=500)
     print(fname+'.png created!')
 
@@ -298,19 +302,21 @@ def normalize_df(df):
     return (df-df.min())/(df.max()-df.min())
         
 if __name__ == '__main__':
+
+    # tracks_directory = input("prompt path to tracks: ")
+    tracks_directory = '../experiments_48h/tracks_48h_pbl/'
+    experiment_directory = os.path.dirname(tracks_directory)
+    benchmarks = os.path.basename(experiment_directory).split('tracks_')[1]
     
-    benchmarks = input("prompt experiments (24h, 48h, 48h_sst, 72h_sst): ")
-    
-    tracks = glob.glob('tracks_'+benchmarks+'/*csv')
-    datacrs = ccrs.PlateCarree()
-    directory = 'Figures_'+benchmarks+'/tracks/'
-    tracks_one_image(tracks, directory)
+    tracks = glob.glob(f'{tracks_directory}/*csv')
+    figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks}', 'tracks')
+    tracks_one_image(tracks, tracks_directory, figures_directory)
     if benchmarks in ['48h_sst', '24h'] :
-        tracks_subplots(tracks, directory)
+        tracks_subplots(tracks, tracks_directory, figures_directory)
     
-    df_dist, df_min = minimum_slp_and_distance(tracks, directory)
-    bar_plot_distances(df_dist, directory+'barplot-distances.png')
-    bar_plot_distances(df_min.drop(columns='Cowan'), directory+'barplot-min-slp.png')
+    df_dist, df_min = minimum_slp_and_distance(tracks, figures_directory)
+    bar_plot_distances(df_dist, figures_directory+'barplot-distances.png')
+    bar_plot_distances(df_min.drop(columns='Cowan'), figures_directory+'barplot-min-slp.png')
     
     dist_mean_norm = normalize_df(df_dist.mean()).sort_index(ascending=True)
     slp_mean_norm = normalize_df(df_min.drop(columns='Cowan').mean()).sort_index(ascending=True)
