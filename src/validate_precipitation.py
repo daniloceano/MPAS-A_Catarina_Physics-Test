@@ -1,15 +1,20 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Feb  8 09:52:10 2023
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    validate_precipitation.py                          :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
+#    Updated: 2023/06/30 17:41:19 by Danilo           ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
 
-@author: daniloceano
-"""
+import os
 import glob
 import argparse
 import f90nml
 import datetime
-import itertools
 
 import numpy as np
 import pandas as pd
@@ -106,22 +111,20 @@ def plot_taylor(sdevs,crmsds,ccoefs,experiments):
                       axismax = axismax, alpha = 1)
 
 
-## Parser options ##
-parser = argparse.ArgumentParser()
+## Inputs ##
 
-parser.add_argument('-bdir','--bench_directory', type=str, required=True,
-                        help='''path to benchmark directory''')
-parser.add_argument('-i','--imerg', type=str, default=None, required=True,
-                        help='''path to IMERG data''')
-parser.add_argument('-o','--output', type=str, default=None,
-                        help='''output name to append file''')
+benchmarks_directory = '/p1-nemo/danilocs/mpas/MPAS-BR/benchmarks/Catarina_physics-test/Catarina_250-8km.physics-pbl_sst/'
+imerg_file = '/p1-nemo/danilocs/mpas/MPAS-BR/met_data/IMERG/IMERG_20040321-20040323.nc'
+experiment_directory = '../experiments_48h'
+benchmarks = '48h_pbl'
 
-args = parser.parse_args()
-
-benchmarks = input("prompt experiments (24h, 48h, 48h_sst, 72h_sst, '2403-2903'): ")
+stats_directory = os.path.join(experiment_directory, f'stats_{benchmarks}')
+figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks}')
 
 if (benchmarks == '48h_sst') or (benchmarks == '72h_sst'):
     ncol, nrow, imax = 2, 2, 3
+elif benchmarks == '48h_pbl':
+    ncol, nrow, imax = 4, 3, 10
 elif benchmarks == '2403-2903':
     ncol, nrow, imax = 1, 1, 1
 else:
@@ -129,7 +132,7 @@ else:
 print('Figure will have ncols:', ncol, 'rows:', nrow, 'n:', imax)
 
 ## Start the code ##
-benchs = glob.glob(args.bench_directory+'/run*')
+benchs = glob.glob(benchmarks_directory+'/run*')
 # Dummy for getting model times
 model_output = benchs[0]+'/latlon.nc'
 namelist_path = benchs[0]+"/namelist.atmosphere"
@@ -140,7 +143,7 @@ times = get_times_nml(namelist,model_data)
 
 first_day = datetime.datetime.strftime(times[0], '%Y-%m-%d')
 last_day = datetime.datetime.strftime(times[-2], '%Y-%m-%d')
-imerg = xr.open_dataset(args.imerg).sel(lat=slice(model_data.latitude[-1],
+imerg = xr.open_dataset(imerg_file).sel(lat=slice(model_data.latitude[-1],
                  model_data.latitude[0]),lon=slice(model_data.longitude[0],
                 model_data.longitude[-1])).sel(time=slice(first_day,last_day))
 print(imerg)                                               
@@ -193,8 +196,8 @@ print('\nPlotting maps...')
 plt.close('all')
 fig1 = plt.figure(figsize=(10, 12))
 fig2 = plt.figure(figsize=(10, 12))
-gs1 = gridspec.GridSpec(6, 3)
-gs2 = gridspec.GridSpec(6, 3)
+gs1 = gridspec.GridSpec(nrow, ncol)
+gs2 = gridspec.GridSpec(nrow, ncol)
 datacrs = ccrs.PlateCarree()
 
 prec_levels = np.arange(0,425,4)
@@ -252,16 +255,14 @@ for fig, cf in zip([fig1, fig2], [cf1, cf2]):
     cb_axes = fig.add_axes([0.85, 0.18, 0.04, 0.6])
     fig.colorbar(cf, cax=cb_axes, orientation="vertical") 
     fig.subplots_adjust(wspace=0.1,hspace=0, right=0.8)
-    
-if args.output is not None:
-    fname = args.output
-else:
-    fname = (args.bench_directory).split('/')[-2].split('.nc')[0]
-fname1 = 'Figures_'+benchmarks+'/'+fname+'_acc_prec'
-fname2 = 'Figures_'+benchmarks+'/'+fname+'_acc_prec_bias'
-fig1.savefig(fname1+'.png', dpi=500)
-fig2.savefig(fname2+'.png', dpi=500)
-print(fname1,'and',fname1,'saved')
+
+fname1 = f"{figures_directory}/{benchmarks}_acc_prec.png"
+fig1.savefig(fname1, dpi=500)
+print(fname1,'saved')
+
+fname2 = f"{figures_directory}/{benchmarks}_acc_prec_bias.png"
+fig2.savefig(fname2, dpi=500)
+print(fname2,'saved')
 
 # =============================================================================
 # Plot IMERG ac prec
@@ -284,9 +285,10 @@ cf = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,
 fig.colorbar(cf, ax=ax, fraction=0.03, pad=0.1)
 ax.coastlines(zorder = 1)
 
-imergname = args.imerg.split('/')[-1].split('.nc')[0]
-fig.savefig('Figures_'+benchmarks+'/'+imergname+'.png', dpi=500)
-print('Figures_'+benchmarks+'/'+imergname,'saved')
+imergname = os.path.basename(imerg_file)
+fname_imerg = f"{figures_directory}/{imergname}.png"
+fig.savefig(fname_imerg, dpi=500)
+print(fname_imerg,'saved')
 
 # =============================================================================
 # PDFs
@@ -300,8 +302,7 @@ pdf_imerg = st.weibull_min.pdf(x_imerg, *params_imerg)
 
 plt.close('all')
 fig = plt.figure(figsize=(10, 16))
-gs = gridspec.GridSpec(6, 3)
-
+gs = gridspec.GridSpec(nrow, ncol)
 
 i = 0
 for col in range(ncol):
@@ -334,10 +335,10 @@ for col in range(ncol):
             
             i+=1
             
-            
 fig.subplots_adjust(hspace=0.25)
-fig.savefig('Figures_'+benchmarks+'/'+fname+'_PDF.png', dpi=500)    
-print('Figures_'+benchmarks+'/'+fname+'_PDF','saved')
+fname_pdf = f"{figures_directory}/{benchmarks}_PDF.png"
+fig.savefig(fname_pdf, dpi=500)    
+print(fname_pdf,'saved')
 
 # =============================================================================
 # Plot Taylor Diagrams and do Statistics ##
@@ -352,8 +353,9 @@ print('plotting taylor diagrams..')
 fig = plt.figure(figsize=(10,10))
 plot_taylor(sdev,crmsd,ccoef,list(data.keys()))
 plt.tight_layout(w_pad=0.1)
-fig.savefig('Figures_'+benchmarks+'/'+fname+'_prec-taylor.png', dpi=500)    
-print('Figures_'+benchmarks+'/'+fname+'_prec-taylor created!')
+fname = f"{figures_directory}/{benchmarks}_taylor.png"
+fig.savefig(fname, dpi=500)    
+print(fname, 'created!')
 
 
 df_stats = pd.DataFrame(crmsd,
@@ -367,7 +369,7 @@ df_stats['d_index'] = d_index
 df_stats_norm = (df_stats-df_stats.min()
                   )/(df_stats.max()-df_stats.min()) 
 df_stats_norm.sort_index(ascending=True).to_csv(
-    './stats-'+benchmarks+'/precip_RMSE_normalised.csv')
+    f'{stats_directory}/precip_RMSE_normalised.csv')
 
 for data, title in zip([df_stats, df_stats_norm],
                        ['stats', 'stats normalised']):
@@ -377,35 +379,8 @@ for data, title in zip([df_stats, df_stats_norm],
         ax.bar(data.index,data[col].values)
         plt.xticks(rotation=30, ha='right')
         plt.tight_layout()
-        f.savefig('Figures_'+benchmarks+'/stats_prec/'+title+'_'+col+'.png', dpi=500)
-
-rmse_vals = np.arange(0.6,-0.01,-0.05)
-r_vals = np.arange(0.6,1.01,0.05)
-d_vals = np.arange(0.6,1.01,0.05)
-
-for rmse_val, r_val, d_val in itertools.product(rmse_vals, r_vals, d_vals):
-    
-    rmse_val, r_val, d_val = round(rmse_val,2), round(r_val,2), round(d_val,2)
-    
-    rmse_norm = df_stats_norm['rmse']
-    corrcoef_norm = df_stats_norm['ccoef']
-    d_norm = df_stats_norm['d_index']
-    
-    approved_rmse = rmse_norm[rmse_norm <= rmse_val].dropna().index.to_list()
-    approved_r = corrcoef_norm[corrcoef_norm >= r_val].dropna().index.to_list()
-    approved_d = d_norm[d_norm >= d_val].dropna().index.to_list()
-    
-    if len(approved_rmse) > 0 and len(approved_r) > 0 and len(approved_d) > 0:
-    
-        approved = list(approved_rmse)
-        approved.extend(x for x in approved_r if x not in approved)
-        approved.extend(x for x in approved_d if x not in approved)
-        
-    else:
-        
-        approved = []
-    
-    if len(approved) > 0 and len(approved) <= 4:
-                
-        print('\nrmse:', rmse_val, 'r:', r_val, 'd:', d_val)
-        [print(i) for i in approved]
+        stats_prec_directory = f"{figures_directory}/stats_prec"
+        if not os.path.exists(stats_prec_directory):
+            os.makedirs(stats_prec_directory)
+        fname_stats = f"{stats_prec_directory}/{benchmarks}_{title}_{col}.png"
+        f.savefig(fname_stats, dpi=500)
