@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/06/30 17:41:19 by Danilo           ###   ########.fr        #
+#    Updated: 2023/06/30 17:43:11 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -384,3 +384,4 @@ for data, title in zip([df_stats, df_stats_norm],
             os.makedirs(stats_prec_directory)
         fname_stats = f"{stats_prec_directory}/{benchmarks}_{title}_{col}.png"
         f.savefig(fname_stats, dpi=500)
+        print(fname_stats, 'saved')
