@@ -1,12 +1,12 @@
 # **************************************************************************** #
 #                                                                              #
 #                                                         :::      ::::::::    #
-#    validate_Lorenzv2.py                               :+:      :+:    :+:    #
+#    validate_Lorenz.py                                 :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/30 13:23:07 by Danilo            #+#    #+#              #
-#    Updated: 2023/06/30 16:14:35 by Danilo           ###   ########.fr        #
+#    Updated: 2023/06/30 16:15:16 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -138,7 +138,6 @@ def validate_Lorenz(results_directory, lec_directory):
         rmse_norm = normalize_df(df_rmse)
         df_rmse_energy = df_rmse[energy_terms]
         df_rmse_not_energy = df_rmse.drop(columns=energy_terms)
-        rmse_threshold = 0.6
         
         sns_heatmap(df_rmse_energy, 'RMSE_energy', figures_directory, benchmarks)
         sns_heatmap(df_rmse_not_energy, 'RMSE', figures_directory, benchmarks)
