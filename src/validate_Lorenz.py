@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/30 13:23:07 by Danilo            #+#    #+#              #
-#    Updated: 2023/06/30 16:15:16 by Danilo           ###   ########.fr        #
+#    Updated: 2023/06/30 16:20:10 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -30,9 +30,20 @@ main_terms = ['Az', 'Ae', 'Kz', 'Ke', 'Ca', 'Ce', 'Ck', 'Ge']
 DiscreteColors = ['#58A8D6', '#74D669', '#D6BF5A', '#D6713A', '#D63631']
 
 def process_data(results_directory, experiments):
-    df_exp_dict = {}
-    for exp in experiments:
-        dirname = exp.split('/')[-1]
+    """
+    Process the data from the given results directory and experiments.
+
+    Parameters:
+    - results_directory (str): The directory where the results are stored.
+    - experiments (list): A list of experiment paths.
+
+    Returns:
+    - dictionary_df_experiments (dict): A dictionary where the keys are experiment paths and the values are DataFrames.
+    - results_ERA (DataFrame): The processed data from the ERA5 dataset.
+    """
+    dictionary_df_experiments = {}
+    for experiment in experiments:
+        dirname = experiment.split('/')[-1]
         outfile = glob.glob(f'{results_directory}/{dirname}*/{dirname}*csv')[0]
         df_exp = pd.read_csv(outfile, index_col=[0])
         df_exp['Datetime'] = pd.to_datetime(df_exp.Date) + pd.to_timedelta(
@@ -40,7 +51,7 @@ def process_data(results_directory, experiments):
         time = df_exp.Datetime  
         df_exp.index = time
         df_exp = df_exp.drop(columns=['Datetime'])
-        df_exp_dict[exp] = df_exp
+        dictionary_df_experiments[experiment] = df_exp
 
     results_ERA = pd.read_csv(glob.glob(f'{results_directory}/*ERA5*/*ERA5*.csv')[0])
         
@@ -48,12 +59,23 @@ def process_data(results_directory, experiments):
     mask = (results_ERA['Datetime'] >= df_exp.index[0]) & (results_ERA['Datetime'] <= df_exp.index[-1])
     results_ERA = results_ERA.loc[mask]
     
-    return df_exp_dict, results_ERA
+    return dictionary_df_experiments, results_ERA
 
-
-def calculate_metrics(df_exp_dict, results_ERA, terms):
+def calculate_metrics(dictionary_df_experiments, results_ERA, terms):
+    """
+    Calculate the root mean squared error (RMSE) and correlation coefficient for each term in the given experiments.
+    
+    Args:
+        dictionary_df_experiments (dict): A dictionary containing dataframes for each experiment.
+        results_ERA (dict): A dictionary containing the ERA results for each term.
+        terms (list): A list of terms for which to calculate the metrics.
+    
+    Returns:
+        df_rmse (pd.DataFrame): A dataframe containing the RMSE values for each term and experiment.
+        df_corrcoef (pd.DataFrame): A dataframe containing the correlation coefficients for each term and experiment.
+    """
     rmse_dict, corrcoef_dict = {}, {}
-    for exp, df_exp in df_exp_dict.items():
+    for exp, df_exp in dictionary_df_experiments.items():
         rmse = {}
         corrcoef = {}
         for term in terms:
@@ -77,7 +99,18 @@ def normalize_df(df):
     return (df - df.min()) / (df.max() - df.min())
 
 def sns_heatmap(data, title, figures_directory, benchmarks):
-    # Set up the colormap based on the title or specific conditions
+    """
+    Generate a heatmap plot using seaborn.
+
+    Args:
+        data (array-like): The data to be plotted.
+        title (str): The title of the plot.
+        figures_directory (str): The directory where the plot will be saved.
+        benchmarks (list): A list of benchmark values.
+
+    Returns:
+        None
+    """
     cmap = None
     if 'RMSE_Normalised' in title:
         cmap = LinearSegmentedColormap.from_list('Custom',
@@ -110,7 +143,16 @@ def sns_heatmap(data, title, figures_directory, benchmarks):
 
 
 def validate_Lorenz(results_directory, lec_directory):
-
+    """
+    Validates the Lorenz data by processing and calculating metrics on the given results and experiments.
+    
+    Parameters:
+        results_directory (str): The directory containing the results.
+        lec_directory (str): The directory containing the experiments.
+        
+    Returns:
+        None
+    """
     results = glob.glob(f'{lec_directory}/*')
 
     experiments = []
@@ -119,10 +161,10 @@ def validate_Lorenz(results_directory, lec_directory):
             experiments.append(os.path.basename(exp).split('_')[0])
 
     # Process data
-    df_exp_dict, results_ERA = process_data(results_directory, experiments)
+    dictionary_df_experiments, results_ERA = process_data(results_directory, experiments)
 
     # Calculate metrics
-    df_rmse_all, df_corrcoef_all = calculate_metrics(df_exp_dict, results_ERA, terms)
+    df_rmse_all, df_corrcoef_all = calculate_metrics(dictionary_df_experiments, results_ERA, terms)
     df_rmse_main = df_rmse_all[main_terms]
     df_corrcoef_main = df_corrcoef_all[main_terms]
 
@@ -147,8 +189,8 @@ def validate_Lorenz(results_directory, lec_directory):
 
 
 if __name__ == "__main__":
-    # results_directory = input("prompt path to tracks: ")
-    results_directory = '../experiments_48h/LEC_Results_48h_pbl/'
+    results_directory = input("prompt path to tracks: ")
+    # results_directory = '../experiments_48h/LEC_Results_48h_pbl/'
     experiment_directory = ('/').join(os.path.dirname(results_directory).split('/')[:-1])
     benchmarks = os.path.basename(os.path.dirname(results_directory)).split('LEC_Results_')[1]
 
