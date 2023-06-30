@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/06/30 17:43:11 by Danilo           ###   ########.fr        #
+#    Updated: 2023/06/30 20:29:53 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -47,10 +47,18 @@ def get_times_nml(namelist,model_data):
     return times
 
 def get_exp_name(bench):
-    expname = bench.split('/')[-1].split('run.')[-1]
-    microp = expname.split('.')[0].split('_')[-1]
-    cumulus = expname.split('.')[-1].split('_')[-1] 
-    return microp+'_'+cumulus
+    expname = os.path.basename(bench)
+    if any(x in expname for x in ['ysu', 'mynn']):
+        _, _, microp, cumulus, pbl =  expname.split('.')
+        pbl = pbl.split('_')[-1]
+    else:
+        _, _, microp, cumulus =  expname.split('.')
+    microp = microp.split('_')[-1]
+    cumulus = cumulus.split('_')[-1]
+    if pbl:
+        return microp+'_'+cumulus+'_'+pbl
+    else:
+        return microp+'_'+cumulus
 
 def get_model_accprec(model_data):
     if ('rainnc' in model_data.variables
