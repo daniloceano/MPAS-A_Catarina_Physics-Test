@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/06/30 21:01:17 by Danilo           ###   ########.fr        #
+#    Updated: 2023/06/30 21:18:38 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -46,16 +46,18 @@ def get_times_nml(namelist,model_data):
     times = pd.date_range(start_date,finish_date,periods=len(model_data.Time)+1)[1:]
     return times
 
-def get_exp_name(bench):
+def get_exp_name(bench, pbl=None):
     expname = os.path.basename(bench)
     if any(x in expname for x in ['ysu', 'mynn']):
         _, _, microp, cumulus, pbl =  expname.split('.')
         pbl = pbl.split('_')[-1]
+    elif "convection" in expname:
+        _, microp, cumulus = expname.split('.')
     else:
         _, _, microp, cumulus =  expname.split('.')
     microp = microp.split('_')[-1]
     cumulus = cumulus.split('_')[-1]
-    if pbl:
+    if pbl is not None:
         return microp+'_'+cumulus+'_'+pbl
     else:
         return microp+'_'+cumulus
@@ -121,25 +123,30 @@ def plot_taylor(sdevs,crmsds,ccoefs,experiments):
 
 ## Inputs ##
 
-benchmarks_directory = '/p1-nemo/danilocs/mpas/MPAS-BR/benchmarks/Catarina_physics-test/Catarina_250-8km.physics-pbl_sst/'
-imerg_file = '/p1-nemo/danilocs/mpas/MPAS-BR/met_data/IMERG/IMERG_20040321-20040323.nc'
+benchmarks_path = '/p1-nemo/danilocs/mpas/MPAS-BR/benchmarks/Catarina_physics-test/'
+benchmarks_directory = f'{benchmarks_path}/Catarina_250-8km.microp_scheme.convection_scheme'
+#benchmarks_directory = f'{benchmarks_path}/Catarina_250-8km.physics-pbl_sst/'
+
+benchmarks_name = '48h'
 experiment_directory = '../experiments_48h'
-benchmarks = '48h_pbl'
 
-stats_directory = os.path.join(experiment_directory, f'stats_{benchmarks}')
-figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks}')
+imerg_file = '/p1-nemo/danilocs/mpas/MPAS-BR/met_data/IMERG/IMERG_20040321-20040323.nc'
 
-if (benchmarks == '48h_sst') or (benchmarks == '72h_sst'):
+stats_directory = os.path.join(experiment_directory, f'stats_{benchmarks_name}')
+figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks_name}')
+
+if (benchmarks_name == '48h_sst') or (benchmarks_name == '72h_sst'):
     ncol, nrow, imax = 2, 2, 3
     figsize = (10, 12)
-elif benchmarks == '48h_pbl':
+elif benchmarks_name == '48h_pbl':
     ncol, nrow, imax = 3, 4, 11
     figsize = (8, 8)
-elif benchmarks == '2403-2903':
+elif benchmarks_name == '2403-2903':
     ncol, nrow, imax = 1, 1, 1
     figsize = (5, 5)
 else:
     ncol, nrow, imax = 3, 6, 18
+    figsize = (10, 12)
 print('Figure will have ncols:', ncol, 'rows:', nrow, 'n:', imax)
 
 ## Start the code ##
@@ -281,11 +288,11 @@ for fig, cf in zip([fig1, fig2], [cf1, cf2]):
     fig.colorbar(cf, cax=cb_axes, orientation="vertical") 
     fig.subplots_adjust(wspace=0.1,hspace=0, right=0.8)
 
-fname1 = f"{figures_directory}/{benchmarks}_acc_prec.png"
+fname1 = f"{figures_directory}/{benchmarks_name}_acc_prec.png"
 fig1.savefig(fname1, dpi=500)
 print(fname1,'saved')
 
-fname2 = f"{figures_directory}/{benchmarks}_acc_prec_bias.png"
+fname2 = f"{figures_directory}/{benchmarks_name}_acc_prec_bias.png"
 fig2.savefig(fname2, dpi=500)
 print(fname2,'saved')
 
@@ -361,7 +368,7 @@ for col in range(ncol):
             i+=1
             
 fig.subplots_adjust(hspace=0.25)
-fname_pdf = f"{figures_directory}/{benchmarks}_PDF.png"
+fname_pdf = f"{figures_directory}/{benchmarks_name}_PDF.png"
 fig.savefig(fname_pdf, dpi=500)    
 print(fname_pdf,'saved')
 
@@ -378,7 +385,7 @@ print('plotting taylor diagrams..')
 fig = plt.figure(figsize=(10,10))
 plot_taylor(sdev,crmsd,ccoef,list(data.keys()))
 plt.tight_layout(w_pad=0.1)
-fname = f"{figures_directory}/{benchmarks}_taylor.png"
+fname = f"{figures_directory}/{benchmarks_name}_taylor.png"
 fig.savefig(fname, dpi=500)    
 print(fname, 'created!')
 
@@ -407,6 +414,6 @@ for data, title in zip([df_stats, df_stats_norm],
         stats_prec_directory = f"{figures_directory}/stats_prec"
         if not os.path.exists(stats_prec_directory):
             os.makedirs(stats_prec_directory)
-        fname_stats = f"{stats_prec_directory}/{benchmarks}_{title}_{col}.png"
+        fname_stats = f"{stats_prec_directory}/{benchmarks_name}_{title}_{col}.png"
         f.savefig(fname_stats, dpi=500)
         print(fname_stats, 'saved')
