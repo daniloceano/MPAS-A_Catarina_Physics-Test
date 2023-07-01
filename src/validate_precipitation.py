@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/06/30 20:29:53 by Danilo           ###   ########.fr        #
+#    Updated: 2023/06/30 21:01:17 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -131,10 +131,13 @@ figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks}')
 
 if (benchmarks == '48h_sst') or (benchmarks == '72h_sst'):
     ncol, nrow, imax = 2, 2, 3
+    figsize = (10, 12)
 elif benchmarks == '48h_pbl':
-    ncol, nrow, imax = 4, 3, 10
+    ncol, nrow, imax = 3, 4, 11
+    figsize = (8, 8)
 elif benchmarks == '2403-2903':
     ncol, nrow, imax = 1, 1, 1
+    figsize = (5, 5)
 else:
     ncol, nrow, imax = 3, 6, 18
 print('Figure will have ncols:', ncol, 'rows:', nrow, 'n:', imax)
@@ -164,6 +167,10 @@ print('Maximum acc prec:',float(imerg_accprec.max()))
 print('\nOpening all data and putting it into a dictionary...')
 data = {}
 data['IMERG'] = imerg_accprec
+
+max_precipitation = float('-inf')
+max_bias = float('-inf')
+min_bias = float('inf')
 
 for bench in benchs:
     
@@ -196,21 +203,31 @@ for bench in benchs:
     data[experiment]['sdev'] = (stats['sdev'][1])
     data[experiment]['willmot_d_index'] = willmot_d_index(
         imerg_accprec.values.ravel(),interp.values.ravel())
+    
+    experiment_max = acc_prec.max().compute().item()
+    experiment_maximum_bias = (interp - imerg_accprec).max().compute().item()
+    experiment_minimum_bias = (interp - imerg_accprec).min().compute().item()
+    if experiment_max > max_precipitation:
+        max_precipitation = experiment_max
+    if experiment_maximum_bias > max_bias:
+        max_bias = experiment_maximum_bias
+    if experiment_minimum_bias < min_bias:
+        min_bias = experiment_minimum_bias
 
 # =============================================================================
 # Plot acc prec maps and bias
 # =============================================================================
 print('\nPlotting maps...')
 plt.close('all')
-fig1 = plt.figure(figsize=(10, 12))
-fig2 = plt.figure(figsize=(10, 12))
+fig1 = plt.figure(figsize=figsize)
+fig2 = plt.figure(figsize=figsize)
 gs1 = gridspec.GridSpec(nrow, ncol)
 gs2 = gridspec.GridSpec(nrow, ncol)
 datacrs = ccrs.PlateCarree()
 
-prec_levels = np.arange(0,425,4)
-bias_levels = np.arange(-700,411,10)
-bias_norm = colors.TwoSlopeNorm(vmin=-700, vcenter=0, vmax=411)
+prec_levels = np.arange(0,max_precipitation*0.8,20)
+bias_levels = np.arange(min_bias*0.6,max_bias*0.6,20)
+bias_norm = colors.TwoSlopeNorm(vmin=min_bias*0.6, vcenter=0, vmax=max_bias*0.6)
 
 i = 0
 for col in range(ncol):
