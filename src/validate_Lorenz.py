@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/30 13:23:07 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/03 17:31:43 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/03 17:36:28 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -30,31 +30,28 @@ main_terms = ['Az', 'Ae', 'Kz', 'Ke', 'Ca', 'Ce', 'Ck', 'Ge']
 DiscreteColors = ['#58A8D6', '#74D669', '#D6BF5A', '#D6713A', '#D63631']
 
 def get_exp_name(experiment):
+    """
+    Returns the name of the experiment based on the given experiment path.
+
+    Parameters:
+        experiment (str): The path of the experiment.
+
+    Returns:
+        str: The name of the experiment.
+    """
     expname = os.path.basename(experiment)
 
-    microp = None
-    for option in ["thompson", "kessler", "wsm6"]:
-        if option in expname:
-            microp = option
-    if microp == None:
-        microp = "off"
+    microp_options = ["thompson", "kessler", "wsm6"]
+    microp = next((option for option in microp_options if option in expname), "off")
 
-    cumulus = None
-    for option in ["grell", "ntiedtke", "tiedtke", "fristch"]:
-        if option in expname:
-            cumulus = option
-    if cumulus == None:
-        cumulus = "off"
-    
-    pbl = None 
-    for option in ["ysu", "mynn"]:
-        if option in expname:
-            pbl = option
+    cumulus_options = ["ntiedtke", "tiedtke", "grell", "fristch"]
+    cumulus = next((option for option in cumulus_options if option in expname), "off")
 
-    if pbl is not None:
-        return microp+'_'+cumulus+'_'+pbl
-    else:
-        return microp+'_'+cumulus
+    pbl_options = ["ysu", "mynn"]
+    pbl = next((option for option in pbl_options if option in expname), None)
+
+    return f"{microp}_{cumulus}_{pbl}" if pbl else f"{microp}_{cumulus}"
+
 
 def process_data(results_directory, experiments):
     """
