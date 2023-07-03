@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/30 13:23:07 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/03 17:26:50 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/03 17:31:43 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -174,6 +174,7 @@ def sns_heatmap(data, title, figures_directory, benchmarks):
     if not os.path.exists(stats_figure_directory):
             os.makedirs(stats_figure_directory)
     f.savefig(f'{stats_figure_directory}/{title}.png')
+    print(f'Heatmap created: {stats_figure_directory}/{title}.png')
 
 def validate_Lorenz(results_directory, lec_directory):
     """
