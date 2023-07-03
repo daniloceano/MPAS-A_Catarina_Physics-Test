@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/30 13:23:07 by Danilo            #+#    #+#              #
-#    Updated: 2023/06/30 16:20:10 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/03 17:26:50 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -29,6 +29,33 @@ budget_diff_renamed = ['∂Az/∂t', '∂Ae/∂t', '∂Kz/∂t', '∂Ke/∂t']
 main_terms = ['Az', 'Ae', 'Kz', 'Ke', 'Ca', 'Ce', 'Ck', 'Ge']
 DiscreteColors = ['#58A8D6', '#74D669', '#D6BF5A', '#D6713A', '#D63631']
 
+def get_exp_name(experiment):
+    expname = os.path.basename(experiment)
+
+    microp = None
+    for option in ["thompson", "kessler", "wsm6"]:
+        if option in expname:
+            microp = option
+    if microp == None:
+        microp = "off"
+
+    cumulus = None
+    for option in ["grell", "ntiedtke", "tiedtke", "fristch"]:
+        if option in expname:
+            cumulus = option
+    if cumulus == None:
+        cumulus = "off"
+    
+    pbl = None 
+    for option in ["ysu", "mynn"]:
+        if option in expname:
+            pbl = option
+
+    if pbl is not None:
+        return microp+'_'+cumulus+'_'+pbl
+    else:
+        return microp+'_'+cumulus
+
 def process_data(results_directory, experiments):
     """
     Process the data from the given results directory and experiments.
@@ -43,8 +70,15 @@ def process_data(results_directory, experiments):
     """
     dictionary_df_experiments = {}
     for experiment in experiments:
-        dirname = experiment.split('/')[-1]
-        outfile = glob.glob(f'{results_directory}/{dirname}*/{dirname}*csv')[0]
+        if len(experiment.split('_')) == 3:
+            microp, cumulus, pbl = experiment.split('_')
+            pattern = f"*{microp}*{cumulus}*{pbl}*"
+            outfile = glob.glob(f'{results_directory}/{pattern}/{pattern}*csv')[0]
+        elif len(experiment.split('_')) == 2:
+            microp, cumulus = experiment.split('_')
+            pattern = f"*{microp}*{cumulus}*"
+            outfile = glob.glob(f'{results_directory}/{pattern}/{pattern}*csv')[0]
+        
         df_exp = pd.read_csv(outfile, index_col=[0])
         df_exp['Datetime'] = pd.to_datetime(df_exp.Date) + pd.to_timedelta(
             df_exp.Hour, unit='h')
@@ -141,7 +175,6 @@ def sns_heatmap(data, title, figures_directory, benchmarks):
             os.makedirs(stats_figure_directory)
     f.savefig(f'{stats_figure_directory}/{title}.png')
 
-
 def validate_Lorenz(results_directory, lec_directory):
     """
     Validates the Lorenz data by processing and calculating metrics on the given results and experiments.
@@ -156,9 +189,10 @@ def validate_Lorenz(results_directory, lec_directory):
     results = glob.glob(f'{lec_directory}/*')
 
     experiments = []
-    for exp in results:
-        if 'ERA5' not in exp:
-            experiments.append(os.path.basename(exp).split('_')[0])
+    for experiment in results:
+        if 'ERA5' not in experiment:
+            experiment_name = get_exp_name(experiment)
+            experiments.append(experiment_name)
 
     # Process data
     dictionary_df_experiments, results_ERA = process_data(results_directory, experiments)
@@ -189,8 +223,10 @@ def validate_Lorenz(results_directory, lec_directory):
 
 
 if __name__ == "__main__":
-    results_directory = input("prompt path to tracks: ")
-    # results_directory = '../experiments_48h/LEC_Results_48h_pbl/'
+
+    ## CHANGE PATH HERE ##
+    results_directory = '../experiments_48h/LEC_Results_48h_pbl/'
+
     experiment_directory = ('/').join(os.path.dirname(results_directory).split('/')[:-1])
     benchmarks = os.path.basename(os.path.dirname(results_directory)).split('LEC_Results_')[1]
 
