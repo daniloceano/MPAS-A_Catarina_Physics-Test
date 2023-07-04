@@ -192,7 +192,7 @@ for var in ['u10','v10','windspeed']:
     print(var)
     
 
-    fname = f'{benchmarks_name}_var'
+    fname = f'{benchmarks_name}_{var}'
     
     ccoef = [data[exp][var]['ccoef'] for exp in data.keys() if exp != 'IMERG']
     crmsd  = [data[exp][var]['crmsd'] for exp in data.keys() if exp != 'IMERG']
@@ -212,8 +212,6 @@ for var in ['u10','v10','windspeed']:
                            index=[exp for exp in data.keys() if exp != 'IMERG'],
                            columns=['rmse'])
     df_stats['ccoef'] = ccoef
-    
-    
     
     # Normalize values for comparison
     df_stats_norm = (df_stats-df_stats.min()
