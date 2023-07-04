@@ -7,7 +7,7 @@ Created on Thu Mar  2 20:04:44 2023
 """
 
 import glob
-import argparse
+import os
 import f90nml
 import datetime
 import itertools
@@ -23,7 +23,6 @@ from matplotlib import rcParams
 from metpy.calc import wind_speed
 
 class BenchData:
-    
     def __init__(self, path, times):
         self.bench = path
         self.data = xr.open_dataset(path+'/latlon.nc').chunk({"Time": -1})
@@ -31,10 +30,20 @@ class BenchData:
         
 
     def get_exp_name(self):
-        expname = self.bench.split('/')[-1].split('run.')[-1]
-        microp = expname.split('.')[0].split('_')[-1]
-        cumulus = expname.split('.')[-1].split('_')[-1] 
-        return microp+'_'+cumulus
+        expname = os.path.basename(self.bench)
+        if any(x in expname for x in ['ysu', 'mynn']):
+            _, _, microp, cumulus, pbl =  expname.split('.')
+            pbl = pbl.split('_')[-1]
+        elif "convection" in expname:
+            _, microp, cumulus = expname.split('.')
+        else:
+            _, _, microp, cumulus =  expname.split('.')
+        microp = microp.split('_')[-1]
+        cumulus = cumulus.split('_')[-1]
+        if pbl is not None:
+            return microp+'_'+cumulus+'_'+pbl
+        else:
+            return microp+'_'+cumulus
         
 def interpolate_mpas_data(variable_data, target, reference):
     if reference == 'quickscat':
@@ -83,56 +92,56 @@ def plot_taylor(sdevs,crmsds,ccoefs,experiments):
                       titleOBS = 'QUICKSCAT', styleObs =':',
                       alpha = 1)
 
-## Parser options ##
-parser = argparse.ArgumentParser()
+## Inputs ##
 
-parser.add_argument('-bdir','--bench_directory', type=str, required=True,
-                        help='''path to benchmark directory''')
-parser.add_argument('-o','--output', type=str, default=None,
-                        help='''output name to append file''')
-group = parser.add_mutually_exclusive_group(required=True)
-group.add_argument('-q','--quickscat', type=str, default=None,
-                        help='''path to QUICKSCAT data''')
-group.add_argument('-e','--ERA5', type=str, default=None,
-                        help='''path to ERA5 data''')
+experiment_directory = '../experiments_48h'
+benchmarks_name = '48h_pbl'
 
-args = parser.parse_args()
-# args = parser.parse_args(['-bdir','/p1-nemo/danilocs/mpas/MPAS-BR/benchmarks/Catarina_physics-test/Catarina_250-8km.best-physics_sst_ext/',
-#                           '-q','/p1-nemo/danilocs/mpas/MPAS-BR/met_data/QUICKSCAT/Catarina_20040321-20040323_v11l30flk.nc'])
+benchmarks_path = '/p1-nemo/danilocs/mpas/MPAS-BR/benchmarks/Catarina_physics-test/'
+#benchmarks_directory = f'{benchmarks_path}/Catarina_250-8km.microp_scheme.convection_scheme'
+benchmarks_directory = f'{benchmarks_path}/Catarina_250-8km.physics-pbl_sst/'
 
-benchmarks_experiment = input("prompt experiments (24h, 48h, 48h_sst): ")
+
+quickscat_file = '/p1-nemo/danilocs/mpas/MPAS-BR/met_data/QUICKSCAT/Catarina_20040321-20040323_v11l30flk.nc'
+era5_file = '/p1-nemo/danilocs/mpas/MPAS-BR/met_data/ERA5/DATA/2004/Catarina-2103-2303_ERA5.nc'
+
+stats_directory = os.path.join(experiment_directory, f'stats_{benchmarks_name}')
+figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks_name}')
 
 ## Start the code ##
-benchs = glob.glob(f"{args.bench_directory}/run*")
+benchs = glob.glob(f"{benchmarks_directory}/run*")
+
 # Dummy for getting model times
 model_output = benchs[0]+'/latlon.nc'
 namelist_path = benchs[0]+"/namelist.atmosphere"
-# open data and namelist
+
+# Open data and namelist
 model_data = xr.open_dataset(model_output)
 namelist = f90nml.read(glob.glob(namelist_path)[0])
 times = get_times_nml(namelist,model_data)
 
 first_day = datetime.datetime.strftime(times[0], '%Y-%m-%d')
 last_day = datetime.datetime.strftime(times[-2], '%Y-%m-%d')
-if args.quickscat:
-    da_reference = convert_lon(xr.open_dataset(args.quickscat),'lon').sel(
-                        lat=slice(model_data.latitude[-1],model_data.latitude[0]),
-                        lon=slice(model_data.longitude[0],model_data.longitude[-1])
-                        ).sel(time=slice(first_day,last_day))
-    u = da_reference.uwnd
-    v = da_reference.vwnd
-    reference = 'quickscat'
-    
-if args.ERA5:
-    da_reference = convert_lon(xr.open_dataset(args.ERA5),'longitude').sel(
-                        latitude=slice(
-                            model_data.latitude[0],model_data.latitude[-1]),
-                        longitude=slice(
-                            model_data.longitude[0],model_data.longitude[-1])
-                        ).sel(time=slice(first_day,last_day))
-    u = da_reference.u10
-    v = da_reference.v10
-    reference = 'ERA5'                          
+
+# Reference: quickscat
+da_reference = convert_lon(xr.open_dataset(quickscat_file),'lon').sel(
+                    lat=slice(model_data.latitude[-1],model_data.latitude[0]),
+                    lon=slice(model_data.longitude[0],model_data.longitude[-1])
+                    ).sel(time=slice(first_day,last_day))
+u = da_reference.uwnd
+v = da_reference.vwnd
+reference = 'quickscat'
+
+# Reference: ERA5
+# da_reference = convert_lon(xr.open_dataset(args.ERA5),'longitude').sel(
+#                     latitude=slice(
+#                         model_data.latitude[0],model_data.latitude[-1]),
+#                     longitude=slice(
+#                         model_data.longitude[0],model_data.longitude[-1])
+#                     ).sel(time=slice(first_day,last_day))
+# u = da_reference.u10
+# v = da_reference.v10
+# reference = 'ERA5'                          
 
 print('\nOpening all data and putting it into a dictionary...')
 benchmarks = [BenchData(bench, times) for bench in benchs]
@@ -182,11 +191,8 @@ for var in ['u10','v10','windspeed']:
     print('\n-------------------------------')
     print(var)
     
-    if args.output is not None:
-        fname = args.output
-    else:
-        fname = (args.bench_directory).split('/')[-2].split('.nc')[0]
-    fname += '_'+var
+
+    fname = f'{benchmarks_name}_var'
     
     ccoef = [data[exp][var]['ccoef'] for exp in data.keys() if exp != 'IMERG']
     crmsd  = [data[exp][var]['crmsd'] for exp in data.keys() if exp != 'IMERG']
@@ -196,8 +202,10 @@ for var in ['u10','v10','windspeed']:
     fig = plt.figure(figsize=(10,10))
     plot_taylor(sdev,crmsd,ccoef,list(data.keys()))
     plt.tight_layout(w_pad=0.1)
-    fig.savefig('Figures_'+benchmarks_experiment+'/stats_wind/'+fname+'-taylor.png', dpi=500)    
-    print('stats_wind/'+fname+'-taylor created!')
+
+    outname = f'{figures_directory}/stats_wind/{fname}-taylor.png'
+    fig.savefig(outname, dpi=500)    
+    print(f'Saved {outname}')
     
     
     df_stats = pd.DataFrame(crmsd,
@@ -209,9 +217,7 @@ for var in ['u10','v10','windspeed']:
     
     # Normalize values for comparison
     df_stats_norm = (df_stats-df_stats.min()
-                      )/(df_stats.max()-df_stats.min()) 
-    df_stats_norm.sort_index(ascending=True).to_csv(
-        './stats-'+benchmarks_experiment+'/'+var+'_RMSE_normalised.csv')
+                      )/(df_stats.max()-df_stats.min())
     
     
     for df, title in zip([df_stats, df_stats_norm],
@@ -222,31 +228,6 @@ for var in ['u10','v10','windspeed']:
             ax.bar(df.index,df[col].values)
             plt.xticks(rotation=30, ha='right')
             plt.tight_layout()
-            f.savefig('Figures_'+benchmarks_experiment+'/stats_wind/'+title+'_'+col+'_'+var+'.png', dpi=500)
-    
-    rmse_vals = np.arange(0.6,-0.01,-0.05)
-    r_vals = np.arange(0.6,1.01,0.05)
-    
-    for rmse_val, r_val in itertools.product(rmse_vals, r_vals):
-        
-        rmse_val, r_val = round(rmse_val,2), round(r_val,2)
-        
-        rmse_norm = df_stats_norm['rmse']
-        corrcoef_norm = df_stats_norm['ccoef']
-        
-        approved_rmse = rmse_norm[rmse_norm <= rmse_val].dropna().index.to_list()
-        approved_r = corrcoef_norm[corrcoef_norm >= r_val].dropna().index.to_list()
-        
-        if len(approved_rmse) > 0 and len(approved_r) > 0:
-        
-            approved = list(approved_rmse)
-            approved.extend(x for x in approved_r if x not in approved)
-            
-        else:
-            
-            approved = []
-        
-        if len(approved) > 0 and len(approved) <= 4:
-                    
-            print('\nrmse:', rmse_val, 'r:', r_val)
-            [print(i) for i in approved]
+            outname = f'{figures_directory}/stats_wind/{title}_{col}.png'
+            f.savefig(outname, dpi=500)
+            print(f'Saved {outname}')
