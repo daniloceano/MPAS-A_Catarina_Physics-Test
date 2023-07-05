@@ -6,13 +6,12 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/06/30 21:18:38 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/05 18:37:03 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 import os
 import glob
-import argparse
 import f90nml
 import datetime
 
@@ -30,23 +29,72 @@ import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 
-def get_times_nml(namelist,model_data):
-    ## Identify time range of simulation using namelist ##
-    # Get simulation start and end dates as strings
+def get_times_nml(namelist, model_data):
+    """
+    Calculates the times of the model data.
+
+    Parameters:
+        namelist (dict): The namelist containing the configuration start time and run duration.
+        model_data (pd.DataFrame): The model data.
+
+    Returns:
+        pd.DatetimeIndex: The times of the model data.
+    """
     start_date_str = namelist['nhyd_model']['config_start_time']
     run_duration_str = namelist['nhyd_model']['config_run_duration']
-    # Convert strings to datetime object
     start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d_%H:%M:%S')
-    
-    run_duration = datetime.datetime.strptime(run_duration_str,'%d_%H:%M:%S')
-    # Get simulation finish date as object and string
-    finish_date  = start_date + datetime.timedelta(days=run_duration.day,
-                                                   hours=run_duration.hour)
-    ## Create a range of dates ##
-    times = pd.date_range(start_date,finish_date,periods=len(model_data.Time)+1)[1:]
+    run_duration = datetime.datetime.strptime(run_duration_str, '%d_%H:%M:%S')
+    finish_date = start_date + datetime.timedelta(days=run_duration.day, hours=run_duration.hour)
+    times = pd.date_range(start_date, finish_date, periods=len(model_data.Time) + 1)[1:]
     return times
 
+def get_experiment_parameters(experiments):
+    """
+    A function that takes a list of experiments and returns the times, first day, and last day.
+
+    Parameters:
+    - experiments: a list of experiments
+
+    Returns:
+    - times: a list of times
+    - first_day: a string representing the first day
+    - last_day: a string representing the last day
+    """
+
+    # Dummy for getting model times
+    dummy = experiments[0]
+    model_output = f'{dummy}/latlon.nc'
+    namelist_path = f'{dummy}/namelist.atmosphere'
+
+    # open data and namelist
+    model_data = xr.open_dataset(model_output).chunk({"Time": -1})
+    namelist = f90nml.read(glob.glob(namelist_path)[0])
+    times = get_times_nml(namelist,model_data)
+    first_day = datetime.datetime.strftime(times[0], '%Y-%m-%d')
+    last_day = datetime.datetime.strftime(times[-2], '%Y-%m-%d')
+
+    parameters = {
+        'times': times,
+        'first_day': first_day,
+        'last_day': last_day,
+        'max_latitude': float(model_data.latitude[0]),
+        'max_longitude': float(model_data.longitude[-1]),
+        'min_latitude': float(model_data.latitude[-1]),
+        'min_longitude': float(model_data.longitude[0]),
+    }
+
+    return parameters 
+
 def get_exp_name(bench, pbl=None):
+    """
+    Extracts the experiment name from a given benchmark file path.
+
+    Parameters:
+        bench (str): The path to the benchmark file.
+
+    Returns:
+        str: The experiment name, which consists of the microp, cumulus, and pbl values separated by underscores.
+    """
     expname = os.path.basename(bench)
     if any(x in expname for x in ['ysu', 'mynn']):
         _, _, microp, cumulus, pbl =  expname.split('.')
@@ -63,6 +111,15 @@ def get_exp_name(bench, pbl=None):
         return microp+'_'+cumulus
 
 def get_model_accprec(model_data):
+    """
+    Returns the accumulated precipitation from the given model data.
+    
+    Parameters:
+        model_data (dict): A dictionary containing the model data.
+        
+    Returns:
+        float: The accumulated precipitation.
+    """
     if ('rainnc' in model_data.variables
         ) and ('rainc' in model_data.variables):
         acc_prec = model_data['rainnc']+model_data['rainc']
@@ -79,7 +136,62 @@ def get_model_accprec(model_data):
         acc_prec = model_data.uReconstructMeridional[0]*0
     return acc_prec[-1]
 
+def process_experiment_data(data, experiment, experiment_name, imerg_accprec, times): 
+    """
+    Processes experiment data and adds it to the given data dictionary.
+
+    Parameters:
+    - data: The dictionary to which the processed data will be added.
+    - experiment: The path to the experiment.
+    - experiment_name: The name of the experiment.
+    - imerg_accprec: The IMERG accumulated precipitation data.
+    - times: The times associated with the model data.
+
+    Returns:
+    - The updated data dictionary.
+    """ 
+    model_data = xr.open_dataset(f'{experiment}/latlon.nc').chunk({"Time": -1})
+    model_data = model_data.assign_coords({"Time":times})
+
+    acc_prec = get_model_accprec(model_data)
+    acc_prec = acc_prec.where(acc_prec >= 0, 0)
+    acc_prec_interp = acc_prec.interp(
+        latitude=imerg_accprec.lat,
+        longitude=imerg_accprec.lon,
+        method='cubic',
+        assume_sorted=False
+    )
+    interp =  acc_prec_interp.where(acc_prec_interp >=0, 0).transpose('lat', 'lon')
+    
+    print('limits for prec data:',float(acc_prec.min()),float(acc_prec.max()))
+    print('limits for interp prec data:',float(acc_prec_interp.min()),
+          float(acc_prec_interp.max()))
+    
+    stats = sm.taylor_statistics(imerg_accprec.values.ravel(),
+                                 interp.values.ravel())
+    
+    data[experiment_name] = {
+        'data': acc_prec,
+        'interp': interp,
+        'ccoef': stats['ccoef'][1],
+        'crmsd': stats['crmsd'][1],
+        'sdev': stats['sdev'][1],
+        'willmot_d_index': willmot_d_index(imerg_accprec.values.ravel(), interp.values.ravel())
+    }
+
+    return data
+
 def willmot_d_index(observed, modeled):
+    """
+    Calculate the Willmot's D index between observed and modeled data.
+
+    Parameters:
+        observed (numpy.ndarray): An array of observed data.
+        modeled (numpy.ndarray): An array of modeled data.
+
+    Returns:
+        float: The Willmot's D index between the observed and modeled data.
+    """
     obs_mean = observed.mean()
     mod_mean = modeled.mean()
     
@@ -88,7 +200,7 @@ def willmot_d_index(observed, modeled):
         
     return  1 - (numerator / denominator)
 
-def plot_taylor(sdevs,crmsds,ccoefs,experiments):
+def call_taylor_diagram(sdevs,crmsds,ccoefs,experiments):
     '''
     Produce the Taylor diagram
     Label the points and change the axis options for SDEV, CRMSD, and CCOEF.
@@ -119,301 +231,351 @@ def plot_taylor(sdevs,crmsds,ccoefs,experiments):
                       colObs = 'k', markerObs = '^',
                       titleOBS = 'IMERG', styleObs =':',
                       axismax = axismax, alpha = 1)
+    
+def define_figure_parameters(benchmarks_name):
+    """
+    Define figure parameters based on the given benchmark name.
+    
+    Parameters:
+        benchmarks_name (str): The name of the benchmark.
+        
+    Returns:
+        tuple: A tuple containing the values of ncol, nrow, imax, and figsize.
+    """
+    if (benchmarks_name == '48h_sst') or (benchmarks_name == '72h_sst'):
+        ncol, nrow, imax = 2, 2, 3
+        figsize = (10, 12)
+    elif benchmarks_name == '48h_pbl':
+        ncol, nrow, imax = 3, 4, 11
+        figsize = (8, 8)
+    elif benchmarks_name == '2403-2903':
+        ncol, nrow, imax = 1, 1, 1
+        figsize = (5, 5)
+    else:
+        ncol, nrow, imax = 3, 6, 18
+        figsize = (10, 12)
+    return ncol, nrow, imax, figsize
+    
+def configure_gridlines(ax, col, row):
+    """
+    Configure gridlines for the map.
 
+    Parameters:
+        ax (AxesSubplot): The axes on which to configure the gridlines.
+        col (int): The column index of the map.
+        row (int): The row index of the map.
+
+    Returns:
+        None
+    """
+    # Configure gridlines for the map
+    gl = ax.gridlines(
+        draw_labels=True,
+        zorder=2,
+        linestyle='dashed',
+        alpha=0.8,
+        color='#383838'
+    )
+    gl.xlabel_style = {'size': 12, 'color': '#383838'}
+    gl.ylabel_style = {'size': 12, 'color': '#383838'}
+    gl.right_labels = None
+    gl.top_labels = None
+    gl.bottom_labels = None if row != 5 else gl.bottom_labels
+    gl.left_labels = None if col != 0 else gl.left_labels
+
+def plot_precipitation_panels(benchmarks_name, bias_flag=False):
+    """
+    Plot precipitation panels for the given benchmarks.
+
+    Parameters:
+    - benchmarks_name (str): The name of the benchmarks.
+    - bias (bool): Whether to plot bias or not. Default is False.
+
+    Returns:
+    None
+    """
+    print('\nPlotting maps...')
+    plt.close('all')
+
+    ncol, nrow, imax, figsize = define_figure_parameters(benchmarks_name)
+    print('Figure will have ncols:', ncol, 'rows:', nrow, 'n:', imax)
+
+    fig = plt.figure(figsize=figsize)
+    gs = gridspec.GridSpec(nrow, ncol)
+    datacrs = ccrs.PlateCarree()
+
+    i = 0
+    for col in range(ncol):
+        for row in range(nrow):
+            
+            if i == imax:
+                break
+
+            experiment = experiments[i]
+            experiment = get_exp_name(experiment)
+            print('\n',experiment)
+            
+            prec = data[experiment]['data']
+            prec_interp = data[experiment]['interp']
+                            
+            ax = fig.add_subplot(gs[row, col], projection=datacrs,frameon=True)
+            ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
+            ax.text(-50,-19,experiment)
+            configure_gridlines(ax, col, row)
+            
+            if bias_flag == False:
+                print('Plotting accumulate prec..')
+                cf = ax.contourf(prec.longitude, prec.latitude, prec,
+                                    cmap=cmo.rain, levels=prec_levels)
+                print('prec limits:',float(prec.min()), float(prec.max()))
+            else:
+                print('Plotting bias..')
+                bias = prec_interp-imerg_accprec
+                cf = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,bias,
+                                    cmap=cmo.balance_r,
+                                    levels=bias_levels, norm=bias_norm)
+                print('bias limits:',float(bias.min()), float(bias.max()))
+            ax.coastlines(zorder = 1)
+            i+=1
+
+    cb_axes = fig.add_axes([0.85, 0.18, 0.04, 0.6])
+    fig.colorbar(cf, cax=cb_axes, orientation="vertical") 
+    fig.subplots_adjust(wspace=0.1,hspace=0, right=0.8)
+
+    if bias_flag == False:
+        fname = f"{figures_directory}/{benchmarks_name}_acc_prec.png"
+    else:
+        fname = f"{figures_directory}/{benchmarks_name}_acc_prec_bias.png"
+    fig.savefig(fname, dpi=500)
+    print(fname,'saved')
+
+def plot_imerg_precipitation(imerg_accprec):
+    """
+    Plots IMERG accumulated precipitation.
+
+    Parameters:
+    - imerg_accprec: The IMERG accumulated precipitation data.
+
+    Returns:
+    None
+    """
+    print('\nPlotting IMERG data..')
+    plt.close('all')
+
+    fig = plt.figure(figsize=(10, 10))
+    datacrs = ccrs.PlateCarree()
+
+    ax = fig.add_subplot(111, projection=datacrs,frameon=True)
+    ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
+    configure_gridlines(ax, 5, 0)
+
+    cf = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,
+                    imerg_accprec, cmap=cmo.rain,
+                    levels=np.arange(0,imerg_accprec.max()+2,2))
+    
+    fig.colorbar(cf, ax=ax, fraction=0.03, pad=0.1)
+    ax.coastlines(zorder = 1)
+
+    imergname = os.path.basename(imerg_file)
+    fname_imerg = f"{figures_directory}/{imergname}.png"
+    fig.savefig(fname_imerg, dpi=500)
+    print(fname_imerg,'saved')
+
+def plot_pdfs(imerg_accprec, benchmarks_name, experiments):
+    """
+    Plot PDFs for the accumulated precipitation data.
+
+    Parameters:
+    - imerg_accprec: A Pandas DataFrame containing the IMERG accumulated precipitation data.
+    - benchmarks_name: A string representing the name of the benchmarks.
+    - experiments: A list of strings representing the names of the experiments.
+
+    Returns:
+    None.
+    """
+    plt.close('all')
+
+    print('\nPlotting PDFs..')
+
+    nbins = 100
+    params_imerg = st.weibull_min.fit(imerg_accprec.values.ravel())
+    x_imerg = np.linspace(st.weibull_min.ppf(0.01, *params_imerg),
+                    st.weibull_min.ppf(0.99, *params_imerg), nbins)
+
+    ncol, nrow, imax, figsize = define_figure_parameters(benchmarks_name)
+    fig = plt.figure(figsize=figsize)
+    gs = gridspec.GridSpec(nrow, ncol)
+
+    i = 0
+    for col in range(ncol):
+        for row in range(nrow):
+            if i == imax:
+                break
+        
+            ax = fig.add_subplot(gs[row, col], frameon=True)
+        
+            experiment = experiments[i]
+            experiment = get_exp_name(experiment)
+            print('\n',experiment)
+            
+            reference = imerg_accprec.values.ravel()
+            predicted =  data[experiment]['interp'].values.ravel()
+            
+            if experiment != 'off_off':
+                ax.hist(reference, bins=nbins, color='k', lw=1, alpha=0.3,
+                        density=True, histtype='step',label='IMERG', zorder=1) 
+                
+                ax.hist(predicted, bins=nbins, color='tab:red',  lw=1, alpha=0.3,
+                        density=True, histtype='step', label=experiment, zorder=100)
+                ax.set_yscale('log')  
+                ax.text
+                ax.text(50, len(reference)*.1,experiment)
+                i+=1
+                
+    fig.subplots_adjust(hspace=0.25)
+    fname_pdf = f"{figures_directory}/{benchmarks_name}_PDF.png"
+    fig.savefig(fname_pdf, dpi=500)    
+    print(fname_pdf,'saved')
+
+def plot_taylor_diagrams(benchmarks_name, data, figures_directory):
+    """
+    Plots Taylor diagrams for the total accumulated precipitation.
+
+    Parameters:
+        benchmarks_name (str): The name of the benchmarks.
+        data (dict): A dictionary containing the data for different experiments.
+        figures_directory (str): The directory to save the generated figures.
+
+    Returns:
+        crmsd (list): A list of the RMSE values.
+        ccoef (list): A list of the R values.
+        d_index (list): A list of the D-index values.
+    """
+    ccoef = [data[exp]['ccoef'] for exp in data.keys() if exp != 'IMERG']
+    crmsd  = [data[exp]['crmsd'] for exp in data.keys() if exp != 'IMERG']
+    sdev = [data[exp]['sdev'] for exp in data.keys() if exp != 'IMERG']
+    d_index = [data[exp]['willmot_d_index'] for exp in data.keys() if exp != 'IMERG']
+
+    ccoef, crmsd, sdev = np.array(ccoef),np.array(crmsd),np.array(sdev)
+
+    print('plotting taylor diagrams..')
+    fig = plt.figure(figsize=(10,10))
+
+    call_taylor_diagram(sdev,crmsd,ccoef,list(data.keys()))
+
+    plt.tight_layout(w_pad=0.1)
+
+    fname = f"{figures_directory}/{benchmarks_name}_taylor.png"
+    fig.savefig(fname, dpi=500)    
+    print(fname, 'created!')
+
+    return crmsd, ccoef, d_index
+
+def precipitation_statistics_to_csv(crmsd, ccoef, d_index, stats_directory):
+    """
+    Generates a CSV file containing precipitation statistics.
+
+    Args:
+        crmsd (numpy.ndarray): An array of root mean square errors (RMSE) for each experiment.
+        ccoef (numpy.ndarray): An array of correlation coefficients (CCoef) for each experiment.
+        d_index (numpy.ndarray): An array of D-indices for each experiment.
+        stats_directory (str): The directory where the statistics file will be saved.
+
+    Returns:
+        tuple: A tuple containing two pandas DataFrames. The first DataFrame contains the original statistics, 
+        including RMSE, CCoef, and D-index. The second DataFrame contains the normalized statistics, where 
+        each value is scaled to a range of 0 to 1.
+
+    """
+    df_stats = pd.DataFrame(
+        crmsd,
+        index=[exp for exp in data.keys() if exp != 'IMERG'],
+        columns=['rmse']
+    )
+
+    df_stats['ccoef'] = ccoef
+    df_stats['d_index'] = d_index
+
+    df_stats_normalised = (df_stats-df_stats.min())/(df_stats.max()-df_stats.min()) 
+    df_stats_normalised.sort_index(ascending=True
+                                   ).to_csv(f'{stats_directory}/precip_RMSE_normalised.csv')
+    return df_stats, df_stats_normalised  
+
+def plot_precipitation_statistics(df_stats, df_stats_normalised, figures_directory):
+    for data, title in zip([df_stats, df_stats_normalised],['stats', 'stats normalised']):
+        for col in data.columns:
+            plt.close('all')
+            fig, ax = plt.subplots(figsize=(10, 10))
+            ax.bar(data.index, data[col].values)
+            plt.xticks(rotation=30, ha='right')
+            plt.tight_layout()
+
+            stats_prec_directory = f"{figures_directory}/stats_prec"
+            os.makedirs(stats_prec_directory, exist_ok=True)
+            fname_stats = f"{stats_prec_directory}/{benchmarks_name}_{title}_{col}.png"
+            fig.savefig(fname_stats, dpi=500)
+            print(fname_stats, 'saved')  
 
 ## Inputs ##
-
 benchmarks_path = '/p1-nemo/danilocs/mpas/MPAS-BR/benchmarks/Catarina_physics-test/'
-benchmarks_directory = f'{benchmarks_path}/Catarina_250-8km.microp_scheme.convection_scheme'
-#benchmarks_directory = f'{benchmarks_path}/Catarina_250-8km.physics-pbl_sst/'
-
-benchmarks_name = '48h'
-experiment_directory = '../experiments_48h'
-
+#benchmarks_directory = f'{benchmarks_path}/Catarina_250-8km.microp_scheme.convection_scheme'
+benchmarks_directory = f'{benchmarks_path}/Catarina_250-8km.physics-pbl_sst/'
+benchmarks_name = '48h_pbl'
+experiments = glob.glob(benchmarks_directory+'/run*')
 imerg_file = '/p1-nemo/danilocs/mpas/MPAS-BR/met_data/IMERG/IMERG_20040321-20040323.nc'
-
+experiment_directory = '../experiments_48h'
 stats_directory = os.path.join(experiment_directory, f'stats_{benchmarks_name}')
 figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks_name}')
 
-if (benchmarks_name == '48h_sst') or (benchmarks_name == '72h_sst'):
-    ncol, nrow, imax = 2, 2, 3
-    figsize = (10, 12)
-elif benchmarks_name == '48h_pbl':
-    ncol, nrow, imax = 3, 4, 11
-    figsize = (8, 8)
-elif benchmarks_name == '2403-2903':
-    ncol, nrow, imax = 1, 1, 1
-    figsize = (5, 5)
-else:
-    ncol, nrow, imax = 3, 6, 18
-    figsize = (10, 12)
-print('Figure will have ncols:', ncol, 'rows:', nrow, 'n:', imax)
-
 ## Start the code ##
-benchs = glob.glob(benchmarks_directory+'/run*')
-# Dummy for getting model times
-model_output = benchs[0]+'/latlon.nc'
-namelist_path = benchs[0]+"/namelist.atmosphere"
-# open data and namelist
-model_data = xr.open_dataset(model_output)
-namelist = f90nml.read(glob.glob(namelist_path)[0])
-times = get_times_nml(namelist,model_data)
+parameters = get_experiment_parameters(experiments)
 
-first_day = datetime.datetime.strftime(times[0], '%Y-%m-%d')
-last_day = datetime.datetime.strftime(times[-2], '%Y-%m-%d')
-imerg = xr.open_dataset(imerg_file).sel(lat=slice(model_data.latitude[-1],
-                 model_data.latitude[0]),lon=slice(model_data.longitude[0],
-                model_data.longitude[-1])).sel(time=slice(first_day,last_day))
-print(imerg)                                               
-                                                   
-print('Using IMERG data from',first_day,'to',last_day)                                             
-imerg_accprec = imerg.precipitationCal.cumsum(dim='time')[-1].transpose(
-    'lat', 'lon')
+# Open IMERG data
+imerg = xr.open_dataset(imerg_file).sel(
+    lat=slice(parameters["min_latitude"], parameters["max_latitude"]),
+    lon=slice(parameters["min_longitude"], parameters["max_longitude"]),
+    time=slice(parameters["first_day"],parameters["last_day"]))
+imerg_accprec = imerg.precipitationCal.cumsum(dim='time')[-1].transpose('lat', 'lon')
+print(imerg)                                                                                      
+print('Using IMERG data from',parameters["first_day"],'to',parameters["last_day"])                                   
 print('Maximum acc prec:',float(imerg_accprec.max()))
 
+
 print('\nOpening all data and putting it into a dictionary...')
-data = {}
-data['IMERG'] = imerg_accprec
+
+data = {'IMERG': imerg_accprec}
 
 max_precipitation = float('-inf')
 max_bias = float('-inf')
 min_bias = float('inf')
 
-for bench in benchs:
+for experiment in experiments:
+    experiment_name = get_exp_name(experiment)
+    print('\n', experiment_name)
     
-    experiment = get_exp_name(bench)
-    print('\n',experiment)
-    
-    model_data = xr.open_dataset(bench+'/latlon.nc').chunk({"Time": -1})
-    model_data = model_data.assign_coords({"Time":times})
+    data = process_experiment_data(data, experiment, experiment_name, imerg_accprec, parameters["times"])
 
-    acc_prec = get_model_accprec(model_data)
-    acc_prec = acc_prec.where(acc_prec >= 0, 0)
-    acc_prec_interp = acc_prec.interp(latitude=imerg_accprec.lat,
-                                      longitude=imerg_accprec.lon,
-                                      method='cubic',assume_sorted=False)
-    interp =  acc_prec_interp.where(acc_prec_interp >=0, 0).transpose(
-        'lat', 'lon')
-    
-    print('limits for prec data:',float(acc_prec.min()),float(acc_prec.max()))
-    print('limits for interp prec data:',float(acc_prec_interp.min()),
-          float(acc_prec_interp.max()))
-    
-    stats = sm.taylor_statistics(imerg_accprec.values.ravel(),
-                                 interp.values.ravel())
-    
-    data[experiment] = {}
-    data[experiment]['data'] = acc_prec
-    data[experiment]['interp'] = interp
-    data[experiment]['ccoef'] = (stats['ccoef'][1])
-    data[experiment]['crmsd'] = (stats['crmsd'][1])
-    data[experiment]['sdev'] = (stats['sdev'][1])
-    data[experiment]['willmot_d_index'] = willmot_d_index(
-        imerg_accprec.values.ravel(),interp.values.ravel())
-    
-    experiment_max = acc_prec.max().compute().item()
-    experiment_maximum_bias = (interp - imerg_accprec).max().compute().item()
-    experiment_minimum_bias = (interp - imerg_accprec).min().compute().item()
-    if experiment_max > max_precipitation:
-        max_precipitation = experiment_max
-    if experiment_maximum_bias > max_bias:
-        max_bias = experiment_maximum_bias
-    if experiment_minimum_bias < min_bias:
-        min_bias = experiment_minimum_bias
+    acc_prec = data[experiment_name]['data']
+    interp = data[experiment_name]['interp']
 
-# =============================================================================
-# Plot acc prec maps and bias
-# =============================================================================
-print('\nPlotting maps...')
-plt.close('all')
-fig1 = plt.figure(figsize=figsize)
-fig2 = plt.figure(figsize=figsize)
-gs1 = gridspec.GridSpec(nrow, ncol)
-gs2 = gridspec.GridSpec(nrow, ncol)
-datacrs = ccrs.PlateCarree()
+    experiment_max = np.max(acc_prec).compute().item()
+    experiment_bias = interp - imerg_accprec
+    experiment_maximum_bias = np.max(experiment_bias).compute().item()
+    experiment_minimum_bias = np.min(experiment_bias).compute().item()
+
+    max_precipitation = max(max_precipitation, experiment_max)
+    max_bias = max(max_bias, experiment_maximum_bias)
+    min_bias = min(min_bias, experiment_minimum_bias)
 
 prec_levels = np.arange(0,max_precipitation*0.8,20)
 bias_levels = np.arange(min_bias*0.6,max_bias*0.6,20)
 bias_norm = colors.TwoSlopeNorm(vmin=min_bias*0.6, vcenter=0, vmax=max_bias*0.6)
 
-i = 0
-for col in range(ncol):
-    for row in range(nrow):
-        
-        if i == imax:
-            break
-        
-        bench = benchs[i]
-        experiment = get_exp_name(bench)
-        print('\n',experiment)
-        
-        prec = data[experiment]['data']
-        prec_interp = data[experiment]['interp']
-        
-        for fig in [fig1,fig2]:
-            
-            ax = fig.add_subplot(gs1[row, col], projection=datacrs,frameon=True)
-            
-            ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
-            gl = ax.gridlines(draw_labels=True,zorder=2,linestyle='dashed',
-                              alpha=0.8, color='#383838')
-            gl.xlabel_style = {'size': 12, 'color': '#383838'}
-            gl.ylabel_style = {'size': 12, 'color': '#383838'}
-            gl.right_labels = None
-            gl.top_labels = None
-            if row != 5:
-                gl.bottom_labels = None
-            if col != 0:
-                gl.left_labels = None
-        
-            ax.text(-50,-19,experiment)
-            
-            if fig == fig1:
-                print('Plotting accumulate prec..')
-                cf1 = ax.contourf(prec.longitude, prec.latitude, prec,
-                                  cmap=cmo.rain, levels=prec_levels)
-                print('prec limits:',float(prec.min()), float(prec.max()))
-            else:
-                print('Plotting bias..')
-                bias = prec_interp-imerg_accprec
-                cf2 = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,bias,
-                                 cmap=cmo.balance_r,
-                                 levels=bias_levels, norm=bias_norm)
-                print('bias limits:',float(bias.min()), float(bias.max()))
-            ax.coastlines(zorder = 1)
-        i+=1
-
-for fig, cf in zip([fig1, fig2], [cf1, cf2]):
-    cb_axes = fig.add_axes([0.85, 0.18, 0.04, 0.6])
-    fig.colorbar(cf, cax=cb_axes, orientation="vertical") 
-    fig.subplots_adjust(wspace=0.1,hspace=0, right=0.8)
-
-fname1 = f"{figures_directory}/{benchmarks_name}_acc_prec.png"
-fig1.savefig(fname1, dpi=500)
-print(fname1,'saved')
-
-fname2 = f"{figures_directory}/{benchmarks_name}_acc_prec_bias.png"
-fig2.savefig(fname2, dpi=500)
-print(fname2,'saved')
-
-# =============================================================================
-# Plot IMERG ac prec
-# =============================================================================
-print('\nPlotting IMERG data..')
-plt.close('all')
-fig = plt.figure(figsize=(10, 10))
-datacrs = ccrs.PlateCarree()
-ax = fig.add_subplot(111, projection=datacrs,frameon=True)
-ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
-gl = ax.gridlines(draw_labels=True,zorder=2,linestyle='dashed',
-                  alpha=0.8, color='#383838')
-gl.xlabel_style = {'size': 12, 'color': '#383838'}
-gl.ylabel_style = {'size': 12, 'color': '#383838'}
-gl.right_labels = None
-gl.top_labels = None
-cf = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,
-                 imerg_accprec, cmap=cmo.rain,
-                 levels=np.arange(0,imerg_accprec.max()+2,2))
-fig.colorbar(cf, ax=ax, fraction=0.03, pad=0.1)
-ax.coastlines(zorder = 1)
-
-imergname = os.path.basename(imerg_file)
-fname_imerg = f"{figures_directory}/{imergname}.png"
-fig.savefig(fname_imerg, dpi=500)
-print(fname_imerg,'saved')
-
-# =============================================================================
-# PDFs
-# =============================================================================
-print('\nPlotting PDFs..')
-nbins = 100
-params_imerg = st.weibull_min.fit(imerg_accprec.values.ravel())
-x_imerg = np.linspace(st.weibull_min.ppf(0.01, *params_imerg),
-                st.weibull_min.ppf(0.99, *params_imerg), nbins)
-pdf_imerg = st.weibull_min.pdf(x_imerg, *params_imerg)
-
-plt.close('all')
-fig = plt.figure(figsize=(10, 16))
-gs = gridspec.GridSpec(nrow, ncol)
-
-i = 0
-for col in range(ncol):
-    for row in range(nrow):
-        
-        if i == imax:
-            break
-    
-        ax = fig.add_subplot(gs[row, col], frameon=True)
-    
-        bench = benchs[i]
-        experiment = get_exp_name(bench)
-        print('\n',experiment)
-        
-        reference = imerg_accprec.values.ravel()
-        predicted =  data[experiment]['interp'].values.ravel()
-        
-        if experiment != 'off_off':
-                 
-            ax.hist(reference, bins=nbins, color='k', lw=1, alpha=0.3,
-                    density=True, histtype='step',label='IMERG', zorder=1) 
-            
-            ax.hist(predicted, bins=nbins, color='tab:red',  lw=1, alpha=0.3,
-                    density=True, histtype='step', label=experiment, zorder=100)
-
-            # ax.set_xscale('log')
-            ax.set_yscale('log')  
-            ax.text
-            ax.text(50, len(reference)*.1,experiment)
-            
-            i+=1
-            
-fig.subplots_adjust(hspace=0.25)
-fname_pdf = f"{figures_directory}/{benchmarks_name}_PDF.png"
-fig.savefig(fname_pdf, dpi=500)    
-print(fname_pdf,'saved')
-
-# =============================================================================
-# Plot Taylor Diagrams and do Statistics ##
-# =============================================================================
-ccoef = [data[exp]['ccoef'] for exp in data.keys() if exp != 'IMERG']
-crmsd  = [data[exp]['crmsd'] for exp in data.keys() if exp != 'IMERG']
-sdev = [data[exp]['sdev'] for exp in data.keys() if exp != 'IMERG']
-d_index = [
-    data[exp]['willmot_d_index'] for exp in data.keys() if exp != 'IMERG']
-ccoef, crmsd, sdev = np.array(ccoef),np.array(crmsd),np.array(sdev)
-print('plotting taylor diagrams..')
-fig = plt.figure(figsize=(10,10))
-plot_taylor(sdev,crmsd,ccoef,list(data.keys()))
-plt.tight_layout(w_pad=0.1)
-fname = f"{figures_directory}/{benchmarks_name}_taylor.png"
-fig.savefig(fname, dpi=500)    
-print(fname, 'created!')
-
-
-df_stats = pd.DataFrame(crmsd,
-                       index=[exp for exp in data.keys() if exp != 'IMERG'],
-                       columns=['rmse'])
-df_stats['ccoef'] = ccoef
-df_stats['d_index'] = d_index
-
-
-# Normalize values for comparison
-df_stats_norm = (df_stats-df_stats.min()
-                  )/(df_stats.max()-df_stats.min()) 
-df_stats_norm.sort_index(ascending=True).to_csv(
-    f'{stats_directory}/precip_RMSE_normalised.csv')
-
-for data, title in zip([df_stats, df_stats_norm],
-                       ['stats', 'stats normalised']):
-    for col in data.columns:
-        plt.close('all')
-        f, ax = plt.subplots(figsize=(10, 10))
-        ax.bar(data.index,data[col].values)
-        plt.xticks(rotation=30, ha='right')
-        plt.tight_layout()
-        stats_prec_directory = f"{figures_directory}/stats_prec"
-        if not os.path.exists(stats_prec_directory):
-            os.makedirs(stats_prec_directory)
-        fname_stats = f"{stats_prec_directory}/{benchmarks_name}_{title}_{col}.png"
-        f.savefig(fname_stats, dpi=500)
-        print(fname_stats, 'saved')
+## Make plots
+plot_precipitation_panels(benchmarks_name)
+plot_precipitation_panels(benchmarks_name, bias_flag=True)
+plot_imerg_precipitation(imerg_accprec)
+plot_pdfs(imerg_accprec, benchmarks_name, experiments)
+crmsd, ccoef, d_index = plot_taylor_diagrams(benchmarks_name, data, figures_directory)
+df_stats, df_stats_normalised = precipitation_statistics_to_csv(crmsd, ccoef, d_index, stats_directory)
+plot_precipitation_statistics(df_stats, df_stats_normalised, figures_directory)
