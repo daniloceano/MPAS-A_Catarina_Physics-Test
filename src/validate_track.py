@@ -7,21 +7,19 @@ Created on Wed Feb  8 09:52:10 2023
 """
 import os
 import glob
+import argparse
+import cmocean
 
 import pandas as pd
+import seaborn as sns
+
+import cartopy
+import cartopy.crs as ccrs
 
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-
 from matplotlib.lines import Line2D
-
-import cartopy.crs as ccrs
-import cartopy
-
-import cmocean.cm as cmo
-
-import seaborn as sns
 
 colors = {'ERA':'gray', 'fritsch':'tab:orange','tiedtke':'tab:red',
           'ntiedtke':'tab:purple', 'freitas':'tab:brown','off':'tab:green',
@@ -37,6 +35,31 @@ markers = {'ERA':'s', 'wsm6':'x', 'thompson':'P','kessler':'D','off':'^',
            'Cowan':'o'}
 
 datacrs = ccrs.PlateCarree()
+
+def get_exp_name(bench, pbl=None):
+    """
+    Extracts the experiment name from a given benchmark file path.
+
+    Parameters:
+        bench (str): The path to the benchmark file.
+
+    Returns:
+        str: The experiment name, which consists of the microp, cumulus, and pbl values separated by underscores.
+    """
+    expname = os.path.basename(bench)
+    if any(x in expname for x in ['ysu', 'mynn']):
+        _, _, microp, cumulus, pbl =  expname.split('.')
+        pbl = pbl.split('_')[-1]
+    elif "convection" in expname:
+        _, microp, cumulus = expname.split('.')
+    else:
+        _, _, microp, cumulus =  expname.split('.')
+    microp = microp.split('_')[-1]
+    cumulus = cumulus.split('_')[-1]
+    if pbl is not None:
+        return microp+'_'+cumulus+'_'+pbl
+    else:
+        return microp+'_'+cumulus
 
 def initialize_map(ax, row, col, datacrs):
     ax.set_extent([-55, -30, -20, -35], crs=datacrs) 
@@ -86,7 +109,7 @@ def tracks_one_image(tracks, tracks_directory, figures_directory):
         exp = os.path.basename(trackfile).split('.csv')[0].split('track_')[1]
         if 'sst' in exp:
             exp = exp.split('sst_')[1]
-        print(exp)
+        print(f'Analising tracks for {exp}...')
         
         track = pd.read_csv(trackfile, index_col=0)
         track = track.loc[track_Cowan_sliced.index]
@@ -327,10 +350,7 @@ def bar_plot_distances(df, fname):
 def normalize_df(df):
     return (df-df.min())/(df.max()-df.min())
         
-if __name__ == '__main__':
-
-    tracks_directory = input("prompt path to tracks: ")
-    # tracks_directory = '../experiments_48h/tracks_48h_pbl/'
+def main(tracks_directory):
     experiment_directory = ('/').join(os.path.dirname(tracks_directory).split('/')[:-1])
     benchmarks = os.path.basename(os.path.dirname(tracks_directory)).split('tracks_')[1]
     
@@ -339,6 +359,7 @@ if __name__ == '__main__':
     figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks}')
     tracks_figures_directory = os.path.join(figures_directory, 'tracks')
     stats_directory = os.path.join(experiment_directory, f'stats_{benchmarks}')
+
     for directory in [figures_directory, tracks_figures_directory, stats_directory]:
         if not os.path.exists(directory):
             os.makedirs(directory)
@@ -359,3 +380,11 @@ if __name__ == '__main__':
     stats = pd.DataFrame(dist_mean_norm, columns=['distance'])
     stats['minimum presure'] = slp_mean_norm
     stats.to_csv(os.path.join(stats_directory, 'distance_min-slp_normalised.csv'))
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("tracks_directory", nargs="?", default="../experiments_48h/tracks_48h/",
+                        help="Path to the tracks directory")
+    args = parser.parse_args()
+
+    main(args.tracks_directory)
