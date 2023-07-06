@@ -109,7 +109,7 @@ def tracks_one_image(tracks, tracks_directory, figures_directory):
         exp = os.path.basename(trackfile).split('.csv')[0].split('track_')[1]
         if 'sst' in exp:
             exp = exp.split('sst_')[1]
-        print(f'Analising tracks for {exp}...')
+        print(f'Plotting tracks for {exp}...')
         
         track = pd.read_csv(trackfile, index_col=0)
         track = track.loc[track_Cowan_sliced.index]
@@ -255,32 +255,33 @@ def minimum_slp_and_distance(tracks, tracks_directory, tracks_figures_directory,
         mins[exp] = min_slp
                     
         print('data range:',min_slp.min(),'to',min_slp.max())
-        
-        if exp == 'ERA5':
-            microp, cumulus, bl, zorder = 'ERA', 'ERA', 'ERA', 100
             
-        elif exp == 'Cowan':
+        if exp == 'Cowan':
             microp, cumulus, bl, zorder = 'Cowan', 'Cowan', 'Cowan', 101
+            x_label_color = 'black'
 
         else:
             distance = track['distance']
             mean_dist = distance.mean()
             std_dist = distance.std()
             stats[exp] = [mean_dist,std_dist]
-            
             distances[exp] = distance
-            
-            zorder=1
+            zorder = 1
+            x_label_color = 'black'
 
             if any(substring in exp for substring in ['ysu', 'mynn']):
                 if 'freitas' in exp:
                     microp, _, cumulus, bl = exp.split('_')
                 else:
                     microp, cumulus, bl = exp.split('_')
+
+            elif any(substring in exp for substring in 'ERA'):
+                microp, cumulus, bl, zorder = 'ERA', 'ERA', 'ERA', 100
+                x_label_color = 'red'
+
             else:
                 microp, cumulus = exp.split('_')[0], exp.split('_')[1]
                 bl = None
-            zorder=1
 
         if bl:
             ls = lines_bl[bl]
@@ -293,11 +294,13 @@ def minimum_slp_and_distance(tracks, tracks_directory, tracks_figures_directory,
         ax1.plot(time,min_slp, markeredgecolor=color, marker=marker,
                     markerfacecolor='None', linewidth=1.5, linestyle=ls,
                     c=color, label=exp, zorder=zorder)
+        ax1.xaxis.label.set_color(x_label_color)
         
-        if exp != 'Cowan' and exp !='ERA5':
+        if exp != 'Cowan':
             ax2.plot(time, distance, markeredgecolor=color, marker=marker,
                         markerfacecolor='None', linewidth=1.5, linestyle=ls,
                         c=color, label=exp, zorder=zorder)
+            ax2.xaxis.label.set_color(x_label_color)
         
     df = pd.DataFrame(stats, index=['mean_dist','std']).T
 
@@ -368,8 +371,8 @@ def main(tracks_directory):
     if benchmarks in ['48h_sst', '24h'] :
         tracks_subplots(tracks, tracks_directory, tracks_figures_directory)
     
-    df_dist, df_min = minimum_slp_and_distance(tracks, tracks_directory,
-                                                tracks_figures_directory, stats_directory)
+    df_dist, df_min = minimum_slp_and_distance(
+        tracks, tracks_directory,tracks_figures_directory, stats_directory)
     bar_plot_distances(df_dist, os.path.join(tracks_figures_directory, 'barplot-distances.png'))
     bar_plot_distances(df_min.drop(columns='Cowan'),
                         os.path.join(tracks_figures_directory, 'barplot-min-slp.png'))
