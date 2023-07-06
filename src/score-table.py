@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/03/14 18:14:06 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/06 00:04:09 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/06 00:04:26 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -75,9 +75,6 @@ if __name__ == '__main__':
                         help="Name to use for this set of experiments")
     parser.add_argument("experiment_directory", nargs="?",default='../experiments_48h',
                         help="Path to expeirment directory for saving results")
-    parser.add_argument("quickscat_file", nargs="?",
-                        default='/p1-nemo/danilocs/mpas/MPAS-BR/met_data/QUICKSCAT/Catarina_20040321-20040323_v11l30flk.nc',
-                        help="Path to QUICKSCAT file")
     args = parser.parse_args()
 
     main(args.benchmarks_name, args.experiment_directory)
