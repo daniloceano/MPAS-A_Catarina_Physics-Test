@@ -186,15 +186,17 @@ def main(benchmarks_directory, benchmarks_name, experiment_directory, quickscat_
         crmsd  = [data[exp][var]['crmsd'] for exp in data.keys() if exp != 'IMERG']
         sdev = [data[exp][var]['sdev'] for exp in data.keys() if exp != 'IMERG']
         ccoef, crmsd, sdev = np.array(ccoef),np.array(crmsd),np.array(sdev)
+
         print('plotting taylor diagrams..')
         fig = plt.figure(figsize=(10,10))
         plot_taylor(sdev,crmsd,ccoef,list(data.keys()))
         plt.tight_layout(w_pad=0.1)
 
-        outname = f'{figures_directory}/stats_wind/{fname}-taylor.png'
+        figures_stats_directory = os.path.join(figures_directory, 'stats_wind')
+        os.makedirs(figures_stats_directory, exist_ok=True)
+        outname = f'{figures_stats_directory}/{fname}-taylor.png'
         fig.savefig(outname, dpi=500)    
         print(f'Saved {outname}')
-        
         
         df_stats = pd.DataFrame(crmsd,
                             index=[exp for exp in data.keys() if exp != 'IMERG'],
@@ -208,14 +210,14 @@ def main(benchmarks_directory, benchmarks_name, experiment_directory, quickscat_
         print(f'Saved {fname_stats}') 
         
         for df, title in zip([df_stats, df_stats_norm],
-                            ['stats', 'stats normalised']):
+                            ['stats', 'stats_normalised']):
             for col in df.columns:
                 plt.close('all')
                 f, ax = plt.subplots(figsize=(10, 10))
                 ax.bar(df.index,df[col].values)
                 plt.xticks(rotation=30, ha='right')
                 plt.tight_layout()
-                outname = f'{figures_directory}/stats_wind/{title}_{col}.png'
+                outname = f'{figures_stats_directory}/{var}_{title}_{col}.png'
                 f.savefig(outname, dpi=500)
                 print(f'Saved {outname}')
 
