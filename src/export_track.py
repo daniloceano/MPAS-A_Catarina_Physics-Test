@@ -28,28 +28,30 @@ lon_domain = slice(-55,-30)
 
 # Helper functions
 
-def get_experiment_name(bench):
+def get_experiment_name(bench, pbl=None):
     """
-    Extracts the experiment name from the benchmark path.
+    Extracts the experiment name from a given benchmark file path.
 
-    Args:
-        benchmark_path (str): Path to the benchmark directory.
+    Parameters:
+        bench (str): The path to the benchmark file.
 
     Returns:
-        str: Experiment name.
+        str: The experiment name, which consists of the microp, cumulus, and pbl values separated by underscores.
     """
-    full_name = os.path.basename(bench)
-    if len(full_name.split('.')) == 4:
-        _, experiment, mp, cu = full_name.split('.')
-    elif len(full_name.split('.')) == 5:
-        _, experiment, mp, cu, bl = full_name.split('.')
-        bl = bl.split('bl_')[1]
-    mp = mp.split('mp_')[1]
-    cu = cu.split('cu_')[1]
-    if bl:
-        return '_'.join([mp, cu, bl])
+    expname = os.path.basename(bench)
+    if any(x in expname for x in ['ysu', 'mynn']):
+        _, _, microp, cumulus, pbl =  expname.split('.')
+        pbl = pbl.split('_')[-1]
+    elif "convection" in expname:
+        _, microp, cumulus = expname.split('.')
     else:
-        return '_'.join([mp, cu])
+        _, _, microp, cumulus =  expname.split('.')
+    microp = microp.split('_')[-1]
+    cumulus = cumulus.split('_')[-1]
+    if pbl is not None:
+        return microp+'_'+cumulus+'_'+pbl
+    else:
+        return microp+'_'+cumulus
 
 def get_simulation_times(namelist,model_data):
     """
@@ -166,6 +168,24 @@ def get_track(slp, TimeIndexer):
     track.index = times
     return track
 
+def process_track(track, track_Cowan_sliced, experiment_name):
+    
+    df_dist = pd.DataFrame({
+        'lat_ref': track_Cowan_sliced.lat,
+        'lon_ref': track_Cowan_sliced.lon,
+        'lat_model': track.lat,
+        'lon_model': track.lon
+    })
+
+    df_dist = df_dist.loc[track_Cowan_sliced.index]
+    track['distance'] =  df_dist.apply(lambda row: calculate_distance(row), axis=1)
+
+    track_name =  f'track_{experiment_name}.csv'
+    track_path = os.path.join(args.output_directory, track_name)
+    track.to_csv(track_path)
+    print(f"{track_path} saved")  
+    return track
+
 def calculate_distance(row):
     """
     Calculate the distance between two coordinates in kilometers.
@@ -180,25 +200,7 @@ def calculate_distance(row):
     end = (row['lat_model'], row['lon_model'])
     return geodesic(start, end).km  
 
-def main():
-
-    ## Parser options ##
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-bdir','--bench_directory', type=str, required=True,
-                            help='''path to benchmark directory''')
-    parser.add_argument('-odir','--output_directory', type=str, required=True,
-                            help='''path to directory to save data''')
-    parser.add_argument('-o','--output', type=str, default=None,
-                            help='''output name to append file''')
-    parser.add_argument('-e','--ERA5', type=str, default=None,
-                            help='''wether to validade with ERA5 data''')
-    
-    args = parser.parse_args()
-
-    # args = parser.parse_args(['-bdir', '/p1-nemo/danilocs/mpas/MPAS-BR/benchmarks/Catarina_physics-test/Catarina_250-8km.physics-pbl_sst/',
-    #                           '-e', '/p1-nemo/danilocs/mpas/MPAS-BR/met_data/ERA5/DATA/2004/Catarina-PhysicsTest_ERA5.grib',
-    #                           '-odir', '../experiments_48h/tracks_48h_pbl'])
-
+def main(args):
     # Validate inputs
     if not os.path.isdir(args.bench_directory):
         print("Invalid benchmark directory path.")
@@ -232,55 +234,50 @@ def main():
                             ).sel(time=slice(times[0],times[-1]),
                             latitude=slice(-20,-35),longitude=slice(-55,-30)).msl
     else:
-        xr.open_dataset(args.ERA5).sel(time=slice(times[0],times[-1]),
+        mslp = xr.open_dataset(args.ERA5).sel(time=slice(times[0],times[-1]),
                         latitude=slice(-20,-35),longitude=slice(-55,-30)).msl
         
     mslp = (mslp * units(mslp.units)).metpy.convert_units('hPa')    
 
-    era_track = get_track(mslp, 'time')
-
-    era_track.to_csv(os.path.join(args.output_directory, 'track_ERA5.csv'))
-    print(f"{os.path.join(args.output_directory, 'track_ERA5.csv')} saved")  
-
     track_Cowan = pd.read_csv(os.path.join(args.output_directory, 'track_Cowan.csv'), index_col=0)
-    track_Cowan_sliced = track_Cowan.loc[slice(first_day, last_day)]               
+    track_Cowan_sliced = track_Cowan.loc[slice(first_day, last_day)]  
+
+    era_track = get_track(mslp, 'time') 
+    process_track(era_track, track_Cowan_sliced, 'ERA5')  
                         
     for bench in benchs:
-        experiment = get_experiment_name(bench)
-        print('\n',experiment)
+        experiment_name = get_experiment_name(bench)
+        print('\n', 'processing track for', experiment_name)
         
-        print('computing slp...')
         model_data  = open_model_dataset(bench, times=times)
-        
+
         surface_pressure = model_data['surface_pressure'] * units.Pa
         surface_height = model_data['zgrid'].isel(nVertLevelsP1=0) * units.m
         surface_t = model_data.t2m * units.K
         surface_miximg_ratio = model_data.q2 * units('kg/kg')
-        mean_virtual_temperature = virtual_temperature(surface_t,
-                                            surface_miximg_ratio).mean(dim='Time')
+        mean_virtual_temperature = virtual_temperature(
+            surface_t,surface_miximg_ratio
+            ).mean(dim='Time')
         
-        slp = surface_pressure_to_mslp(surface_pressure,
-                                    mean_virtual_temperature, surface_height)
-        
+        slp = surface_pressure_to_mslp(surface_pressure, mean_virtual_temperature, surface_height)
         slp = slp.metpy.convert_units('hPa')
         slp = slp.sel(Time=track_Cowan_sliced.index)
         
-        print('getting track..')
         track = get_track(slp, 'Time')
 
-        df_dist = pd.DataFrame({
-            'lat_ref': era_track.lat,
-            'lon_ref': era_track.lon,
-            'lat_model': track.lat,
-            'lon_model': track.lon
-        })
-        df_dist = df_dist.loc[track_Cowan_sliced.index]
-            
-        track['distance'] =  df_dist.apply(lambda row: calculate_distance(row), axis=1)
-        
-        track.to_csv(os.path.join(args.output_directory, f'track_{experiment}.csv'))
-        print(f"{os.path.join(args.output_directory, f'track_{experiment}.csv')} saved")
+        process_track(track, track_Cowan_sliced, experiment_name)  
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-bdir', '--bench_directory', type=str,
+                        default='/p1-nemo/danilocs/mpas/MPAS-BR/benchmarks/Catarina_physics-test/Catarina_250-8km.microp_scheme.convection_scheme/',
+                        help='path to benchmark directory')
+    parser.add_argument('-odir', '--output_directory', type=str,
+                        default='../experiments_48h/tracks_48h',
+                        help='path to directory to save data')
+    parser.add_argument('-e', '--ERA5', type=str,
+                        default='/p1-nemo/danilocs/mpas/MPAS-BR/met_data/ERA5/DATA/2004/Catarina-PhysicsTest_ERA5.grib',
+                        help='path to ERA5 file')
+    args = parser.parse_args()
+    main(args)
