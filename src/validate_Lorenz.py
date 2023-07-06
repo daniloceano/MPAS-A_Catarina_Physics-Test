@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/30 13:23:07 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/05 22:51:36 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/05 23:18:57 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -144,7 +144,7 @@ def sns_heatmap(data, title, figures_directory, benchmarks):
         None
     """
     cmap = None
-    if 'RMSE_Normalised' in title:
+    if 'RMSE_normalised_main' in title:
         cmap = LinearSegmentedColormap.from_list('Custom',
                                     DiscreteColors, len(DiscreteColors))
     elif 'R_Normalised' in title:
@@ -194,33 +194,34 @@ def main(results_directory):
     # Process data
     dictionary_df_experiments, results_ERA = process_data(results_directory, experiments)
 
-    # Calculate metrics
+    # Calculate metrics for all LEC terms
     df_rmse_all, df_corrcoef_all = calculate_metrics(dictionary_df_experiments, results_ERA, terms)
+    df_rmse_all, df_corrcoef_all = df_rmse_all.sort_index(ascending=True), df_corrcoef_all.sort_index(ascending=True)
+    
+    # Differentiate RMSE between energy and not energy
+    df_rmse_energy = df_rmse_all[energy_terms]
+    df_rmse_not_energy = df_rmse_all.drop(columns=energy_terms)
+    
+    # RMSE for only the main terms
     df_rmse_main = df_rmse_all[main_terms]
-    df_corrcoef_main = df_corrcoef_all[main_terms]
 
     # Normalize values for comparison
-    df_rmse_main_norm = normalize_df(df_rmse_main).sort_index(ascending=True)
-    df_rmse_main_norm.to_csv(f'{stats_directory}/Lorenz-main_RMSE_normalised.csv')
+    df_rmse_main_norm = normalize_df(df_rmse_main)
+    df_corrcoef_norm = normalize_df(df_corrcoef_all)
 
     # Visualize heatmaps
-    for df_rmse, df_corrcoef in zip([df_rmse_all, df_rmse_main], [df_corrcoef_all, df_corrcoef_main]):
-        
-        corrcoef_norm = normalize_df(df_corrcoef)
-        rmse_norm = normalize_df(df_rmse)
-        df_rmse_energy = df_rmse[energy_terms]
-        df_rmse_not_energy = df_rmse.drop(columns=energy_terms)
-        
-        sns_heatmap(df_rmse_energy, 'RMSE_energy', figures_directory, benchmarks)
-        sns_heatmap(df_rmse_not_energy, 'RMSE', figures_directory, benchmarks)
-        sns_heatmap(rmse_norm, 'RMSE_Normalised', figures_directory, benchmarks)
-        sns_heatmap(df_corrcoef, 'R', figures_directory, benchmarks)
-        sns_heatmap(corrcoef_norm, 'R_Normalised', figures_directory, benchmarks)
+    sns_heatmap(df_rmse_energy, 'RMSE_energy', figures_directory, benchmarks)
+    sns_heatmap(df_rmse_not_energy, 'RMSE_not-energy', figures_directory, benchmarks)
+    sns_heatmap(df_rmse_main_norm, 'RMSE_normalised_main', figures_directory, benchmarks)
+    sns_heatmap(df_corrcoef_all, 'R', figures_directory, benchmarks)
+    sns_heatmap(df_corrcoef_norm, 'R_normalised', figures_directory, benchmarks)
+
+    # Save RMSE for main terms,normalised, for score table
+    df_rmse_main_norm.to_csv(f'{stats_directory}/Lorenz-main_RMSE_normalised.csv')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("results_directory", nargs="?", default='../experiments_48h/LEC_Results_48h/',
                         help="Path to the tracks directory")
     args = parser.parse_args()
-
     main(args.results_directory)
