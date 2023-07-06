@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.lines import Line2D
 
-colors = {'ERA':'gray', 'fritsch':'tab:orange','tiedtke':'tab:red',
+colors = {'ERA':'k', 'fritsch':'tab:orange','tiedtke':'tab:red',
           'ntiedtke':'tab:purple', 'freitas':'tab:brown','off':'tab:green',
           'Cowan': 'k'}
 
