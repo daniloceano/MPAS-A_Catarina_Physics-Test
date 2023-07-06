@@ -29,7 +29,7 @@ class BenchData:
         self.data = self.data.assign_coords({"Time":times})
         
 
-    def get_exp_name(self):
+    def get_exp_name(self, pbl=None):
         expname = os.path.basename(self.bench)
         if any(x in expname for x in ['ysu', 'mynn']):
             _, _, microp, cumulus, pbl =  expname.split('.')
