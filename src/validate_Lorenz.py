@@ -6,10 +6,11 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/30 13:23:07 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/03 17:36:28 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/05 22:51:36 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
+import argparse
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -173,17 +174,15 @@ def sns_heatmap(data, title, figures_directory, benchmarks):
     f.savefig(f'{stats_figure_directory}/{title}.png')
     print(f'Heatmap created: {stats_figure_directory}/{title}.png')
 
-def validate_Lorenz(results_directory, lec_directory):
-    """
-    Validates the Lorenz data by processing and calculating metrics on the given results and experiments.
-    
-    Parameters:
-        results_directory (str): The directory containing the results.
-        lec_directory (str): The directory containing the experiments.
-        
-    Returns:
-        None
-    """
+def main(results_directory):
+
+    experiment_directory = ('/').join(os.path.dirname(results_directory).split('/')[:-1])
+    benchmarks = os.path.basename(os.path.dirname(results_directory)).split('LEC_Results_')[1]
+
+    stats_directory = os.path.join(experiment_directory, f'stats_{benchmarks}')
+    figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks}')
+    lec_directory = os.path.join(experiment_directory, f'LEC_Results_{benchmarks}')
+
     results = glob.glob(f'{lec_directory}/*')
 
     experiments = []
@@ -204,7 +203,6 @@ def validate_Lorenz(results_directory, lec_directory):
     df_rmse_main_norm = normalize_df(df_rmse_main).sort_index(ascending=True)
     df_rmse_main_norm.to_csv(f'{stats_directory}/Lorenz-main_RMSE_normalised.csv')
 
-
     # Visualize heatmaps
     for df_rmse, df_corrcoef in zip([df_rmse_all, df_rmse_main], [df_corrcoef_all, df_corrcoef_main]):
         
@@ -219,17 +217,10 @@ def validate_Lorenz(results_directory, lec_directory):
         sns_heatmap(df_corrcoef, 'R', figures_directory, benchmarks)
         sns_heatmap(corrcoef_norm, 'R_Normalised', figures_directory, benchmarks)
 
-
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("results_directory", nargs="?", default='../experiments_48h/LEC_Results_48h/',
+                        help="Path to the tracks directory")
+    args = parser.parse_args()
 
-    ## CHANGE PATH HERE ##
-    results_directory = '../experiments_48h/LEC_Results_48h_pbl/'
-
-    experiment_directory = ('/').join(os.path.dirname(results_directory).split('/')[:-1])
-    benchmarks = os.path.basename(os.path.dirname(results_directory)).split('LEC_Results_')[1]
-
-    stats_directory = os.path.join(experiment_directory, f'stats_{benchmarks}')
-    figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks}')
-    lec_directory = os.path.join(experiment_directory, f'LEC_Results_{benchmarks}')
-
-    validate_Lorenz(results_directory, lec_directory)
+    main(args.results_directory)
