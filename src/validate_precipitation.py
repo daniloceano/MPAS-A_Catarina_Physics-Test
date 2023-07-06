@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/05 18:37:03 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/05 23:38:23 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -14,6 +14,7 @@ import os
 import glob
 import f90nml
 import datetime
+import argparse
 
 import numpy as np
 import pandas as pd
@@ -283,7 +284,9 @@ def configure_gridlines(ax, col, row):
     gl.bottom_labels = None if row != 5 else gl.bottom_labels
     gl.left_labels = None if col != 0 else gl.left_labels
 
-def plot_precipitation_panels(benchmarks_name, bias_flag=False):
+def plot_precipitation_panels(
+        data, imerg_accprec, experiments, benchmarks_name,
+          figures_directory, prec_levels, bias_levels, bias_norm, bias_flag=False):
     """
     Plot precipitation panels for the given benchmarks.
 
@@ -349,7 +352,7 @@ def plot_precipitation_panels(benchmarks_name, bias_flag=False):
     fig.savefig(fname, dpi=500)
     print(fname,'saved')
 
-def plot_imerg_precipitation(imerg_accprec):
+def plot_imerg_precipitation(imerg_accprec, imerg_file, figures_directory):
     """
     Plots IMERG accumulated precipitation.
 
@@ -381,7 +384,7 @@ def plot_imerg_precipitation(imerg_accprec):
     fig.savefig(fname_imerg, dpi=500)
     print(fname_imerg,'saved')
 
-def plot_pdfs(imerg_accprec, benchmarks_name, experiments):
+def plot_pdfs(data, imerg_accprec, benchmarks_name, experiments, figures_directory):
     """
     Plot PDFs for the accumulated precipitation data.
 
@@ -471,7 +474,7 @@ def plot_taylor_diagrams(benchmarks_name, data, figures_directory):
 
     return crmsd, ccoef, d_index
 
-def precipitation_statistics_to_csv(crmsd, ccoef, d_index, stats_directory):
+def precipitation_statistics_to_csv(data, crmsd, ccoef, d_index, stats_directory):
     """
     Generates a CSV file containing precipitation statistics.
 
@@ -501,7 +504,7 @@ def precipitation_statistics_to_csv(crmsd, ccoef, d_index, stats_directory):
                                    ).to_csv(f'{stats_directory}/precip_RMSE_normalised.csv')
     return df_stats, df_stats_normalised  
 
-def plot_precipitation_statistics(df_stats, df_stats_normalised, figures_directory):
+def plot_precipitation_statistics(df_stats, df_stats_normalised, benchmarks_name, figures_directory):
     for data, title in zip([df_stats, df_stats_normalised],['stats', 'stats normalised']):
         for col in data.columns:
             plt.close('all')
@@ -516,66 +519,83 @@ def plot_precipitation_statistics(df_stats, df_stats_normalised, figures_directo
             fig.savefig(fname_stats, dpi=500)
             print(fname_stats, 'saved')  
 
-## Inputs ##
-benchmarks_path = '/p1-nemo/danilocs/mpas/MPAS-BR/benchmarks/Catarina_physics-test/'
-#benchmarks_directory = f'{benchmarks_path}/Catarina_250-8km.microp_scheme.convection_scheme'
-benchmarks_directory = f'{benchmarks_path}/Catarina_250-8km.physics-pbl_sst/'
-benchmarks_name = '48h_pbl'
-experiments = glob.glob(benchmarks_directory+'/run*')
-imerg_file = '/p1-nemo/danilocs/mpas/MPAS-BR/met_data/IMERG/IMERG_20040321-20040323.nc'
-experiment_directory = '../experiments_48h'
-stats_directory = os.path.join(experiment_directory, f'stats_{benchmarks_name}')
-figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks_name}')
+def main(benchmarks_directory, benchmarks_name, experiment_directory, imerg_file):
 
-## Start the code ##
-parameters = get_experiment_parameters(experiments)
+    ## Inputs ##
+    experiments = glob.glob(benchmarks_directory+'/run*')
+    stats_directory = os.path.join(experiment_directory, f'stats_{benchmarks_name}')
+    figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks_name}')
 
-# Open IMERG data
-imerg = xr.open_dataset(imerg_file).sel(
-    lat=slice(parameters["min_latitude"], parameters["max_latitude"]),
-    lon=slice(parameters["min_longitude"], parameters["max_longitude"]),
-    time=slice(parameters["first_day"],parameters["last_day"]))
-imerg_accprec = imerg.precipitationCal.cumsum(dim='time')[-1].transpose('lat', 'lon')
-print(imerg)                                                                                      
-print('Using IMERG data from',parameters["first_day"],'to',parameters["last_day"])                                   
-print('Maximum acc prec:',float(imerg_accprec.max()))
+    ## Start the code ##
+    parameters = get_experiment_parameters(experiments)
+
+    # Open IMERG data
+    imerg = xr.open_dataset(imerg_file).sel(
+        lat=slice(parameters["min_latitude"], parameters["max_latitude"]),
+        lon=slice(parameters["min_longitude"], parameters["max_longitude"]),
+        time=slice(parameters["first_day"],parameters["last_day"]))
+    imerg_accprec = imerg.precipitationCal.cumsum(dim='time')[-1].transpose('lat', 'lon')
+    print(imerg)                                                                                      
+    print('Using IMERG data from',parameters["first_day"],'to',parameters["last_day"])                                   
+    print('Maximum acc prec:',float(imerg_accprec.max()))
 
 
-print('\nOpening all data and putting it into a dictionary...')
+    print('\nOpening all data and putting it into a dictionary...')
 
-data = {'IMERG': imerg_accprec}
+    data = {'IMERG': imerg_accprec}
 
-max_precipitation = float('-inf')
-max_bias = float('-inf')
-min_bias = float('inf')
+    max_precipitation = float('-inf')
+    max_bias = float('-inf')
+    min_bias = float('inf')
 
-for experiment in experiments:
-    experiment_name = get_exp_name(experiment)
-    print('\n', experiment_name)
-    
-    data = process_experiment_data(data, experiment, experiment_name, imerg_accprec, parameters["times"])
+    for experiment in experiments:
+        experiment_name = get_exp_name(experiment)
+        print('\n', experiment_name)
+        
+        data = process_experiment_data(data, experiment, experiment_name, imerg_accprec, parameters["times"])
 
-    acc_prec = data[experiment_name]['data']
-    interp = data[experiment_name]['interp']
+        acc_prec = data[experiment_name]['data']
+        interp = data[experiment_name]['interp']
 
-    experiment_max = np.max(acc_prec).compute().item()
-    experiment_bias = interp - imerg_accprec
-    experiment_maximum_bias = np.max(experiment_bias).compute().item()
-    experiment_minimum_bias = np.min(experiment_bias).compute().item()
+        experiment_max = np.max(acc_prec).compute().item()
+        experiment_bias = interp - imerg_accprec
+        experiment_maximum_bias = np.max(experiment_bias).compute().item()
+        experiment_minimum_bias = np.min(experiment_bias).compute().item()
 
-    max_precipitation = max(max_precipitation, experiment_max)
-    max_bias = max(max_bias, experiment_maximum_bias)
-    min_bias = min(min_bias, experiment_minimum_bias)
+        max_precipitation = max(max_precipitation, experiment_max)
+        max_bias = max(max_bias, experiment_maximum_bias)
+        min_bias = min(min_bias, experiment_minimum_bias)
 
-prec_levels = np.arange(0,max_precipitation*0.8,20)
-bias_levels = np.arange(min_bias*0.6,max_bias*0.6,20)
-bias_norm = colors.TwoSlopeNorm(vmin=min_bias*0.6, vcenter=0, vmax=max_bias*0.6)
+    prec_levels = np.arange(0,max_precipitation*0.8,20)
+    bias_levels = np.arange(min_bias*0.6,max_bias*0.6,20)
+    bias_norm = colors.TwoSlopeNorm(vmin=min_bias*0.6, vcenter=0, vmax=max_bias*0.6)
 
-## Make plots
-plot_precipitation_panels(benchmarks_name)
-plot_precipitation_panels(benchmarks_name, bias_flag=True)
-plot_imerg_precipitation(imerg_accprec)
-plot_pdfs(imerg_accprec, benchmarks_name, experiments)
-crmsd, ccoef, d_index = plot_taylor_diagrams(benchmarks_name, data, figures_directory)
-df_stats, df_stats_normalised = precipitation_statistics_to_csv(crmsd, ccoef, d_index, stats_directory)
-plot_precipitation_statistics(df_stats, df_stats_normalised, figures_directory)
+    ## Make plots
+    plot_precipitation_panels(data, imerg_accprec, experiments, benchmarks_name,
+                                figures_directory, prec_levels, bias_levels, bias_norm)
+    plot_precipitation_panels(data, imerg_accprec, experiments, benchmarks_name,
+                                figures_directory, prec_levels, bias_levels, bias_norm, bias_flag=True)
+    plot_imerg_precipitation(imerg_accprec, imerg_file, figures_directory)
+    plot_pdfs(data, imerg_accprec, benchmarks_name, experiments, figures_directory)
+    crmsd, ccoef, d_index = plot_taylor_diagrams(benchmarks_name, data, figures_directory)
+    df_stats, df_stats_normalised = precipitation_statistics_to_csv(
+                                                            data, crmsd, ccoef, d_index, stats_directory)
+    plot_precipitation_statistics(df_stats, df_stats_normalised, benchmarks_name, figures_directory)
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("benchmarks_directory", nargs="?",
+                        default='/p1-nemo/danilocs/mpas/MPAS-BR/benchmarks/Catarina_physics-test/Catarina_250-8km.microp_scheme.convection_scheme',
+                        help="Path to MPAS benchmarks")
+    parser.add_argument("benchmarks_name", nargs="?",default="48h",
+                        help="Name to use for this set of experiments")
+    parser.add_argument("experiment_directory", nargs="?",default='../experiments_48h',
+                        help="Path to expeirment directory for saving results")
+    parser.add_argument("imerg_file", nargs="?",
+                        default='/p1-nemo/danilocs/mpas/MPAS-BR/met_data/IMERG/IMERG_20040321-20040323.nc',
+                        help="Path to IMERG file")
+    args = parser.parse_args()
+
+    main(args.benchmarks_directory, args.benchmarks_name, args.experiment_directory, args.imerg_file)
