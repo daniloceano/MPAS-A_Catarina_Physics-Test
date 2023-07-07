@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/03/14 18:14:06 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/07 17:46:25 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/07 20:04:36 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -50,7 +50,12 @@ def main(benchmarks_name, experiment_directory):
         print(variable)
         
         tmp = pd.read_csv(file, index_col=[0]).sort_index(ascending=True)
-        indexes = tmp.index
+        
+        # Remove the "ERA5" row if it exists
+        if 'ERA5' in tmp.index:
+            tmp = tmp.drop('ERA5')
+        
+        # indexes = tmp.index
         # tmp.index = range(len(tmp))
         
         if 'rmse' in tmp.columns:
@@ -60,7 +65,7 @@ def main(benchmarks_name, experiment_directory):
                 stats[col] = tmp[col]
         
     df = pd.DataFrame.from_dict(stats)
-    df.index = indexes
+    # df.index = indexes
     df['mean'] = df.mean(axis=1)
     
     sns_heatmap(df, figures_directory)
