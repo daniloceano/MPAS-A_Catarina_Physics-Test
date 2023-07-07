@@ -369,6 +369,10 @@ def main(tracks_directory):
     
     df_dist, df_min = minimum_slp_and_distance(
         tracks, tracks_directory,tracks_figures_directory, stats_directory)
+        
+    df_dist = df_dist.sort_index(axis=1, ascending=True)
+    df_min = df_min.sort_index(axis=1, ascending=True)
+    
     bar_plot_distances(df_dist, os.path.join(tracks_figures_directory, 'barplot-distances.png'))
     bar_plot_distances(df_min.drop(columns='Cowan'),
                         os.path.join(tracks_figures_directory, 'barplot-min-slp.png'))
