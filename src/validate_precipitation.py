@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/05 23:38:23 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/07 20:48:45 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -86,30 +86,28 @@ def get_experiment_parameters(experiments):
 
     return parameters 
 
-def get_exp_name(bench, pbl=None):
+def get_exp_name(experiment):
     """
-    Extracts the experiment name from a given benchmark file path.
+    Returns the name of the experiment based on the given experiment path.
 
     Parameters:
-        bench (str): The path to the benchmark file.
+        experiment (str): The path of the experiment.
 
     Returns:
-        str: The experiment name, which consists of the microp, cumulus, and pbl values separated by underscores.
+        str: The name of the experiment.
     """
-    expname = os.path.basename(bench)
-    if any(x in expname for x in ['ysu', 'mynn']):
-        _, _, microp, cumulus, pbl =  expname.split('.')
-        pbl = pbl.split('_')[-1]
-    elif "convection" in expname:
-        _, microp, cumulus = expname.split('.')
-    else:
-        _, _, microp, cumulus =  expname.split('.')
-    microp = microp.split('_')[-1]
-    cumulus = cumulus.split('_')[-1]
-    if pbl is not None:
-        return microp+'_'+cumulus+'_'+pbl
-    else:
-        return microp+'_'+cumulus
+    expname = os.path.basename(experiment)
+
+    microp_options = ["thompson", "kessler", "wsm6"]
+    microp = next((option for option in microp_options if option in expname), "off")
+
+    cumulus_options = ["ntiedtke", "tiedtke", "freitas", "fristch"]
+    cumulus = next((option for option in cumulus_options if option in expname), "off")
+
+    pbl_options = ["ysu", "mynn"]
+    pbl = next((option for option in pbl_options if option in expname), None)
+
+    return f"{microp}_{cumulus}_{pbl}" if pbl else f"{microp}_{cumulus}"
 
 def get_model_accprec(model_data):
     """
