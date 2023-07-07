@@ -301,11 +301,7 @@ def minimum_slp_and_distance(tracks, tracks_directory, tracks_figures_directory,
                         markerfacecolor='None', linewidth=1.5, linestyle=ls,
                         c=color, label=exp, zorder=zorder)
             ax2.xaxis.label.set_color(x_label_color)
-        
-    df = pd.DataFrame(stats, index=['mean_dist','std']).T
-
-    df.to_csv(os.path.join(stats_directory, 'distances.csv'))
-    
+            
     df_dist = pd.DataFrame.from_dict(distances)
     df_min = pd.DataFrame.from_dict(mins)
     
