@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/03/14 18:14:06 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/06 00:04:26 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/07 17:46:25 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -51,7 +51,7 @@ def main(benchmarks_name, experiment_directory):
         
         tmp = pd.read_csv(file, index_col=[0]).sort_index(ascending=True)
         indexes = tmp.index
-        tmp.index = range(len(tmp))
+        # tmp.index = range(len(tmp))
         
         if 'rmse' in tmp.columns:
             stats[variable] = tmp['rmse']
