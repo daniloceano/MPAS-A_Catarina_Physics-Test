@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/30 13:23:07 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/05 23:18:57 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/07 20:40:30 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -45,7 +45,7 @@ def get_exp_name(experiment):
     microp_options = ["thompson", "kessler", "wsm6"]
     microp = next((option for option in microp_options if option in expname), "off")
 
-    cumulus_options = ["ntiedtke", "tiedtke", "grell", "fristch"]
+    cumulus_options = ["ntiedtke", "tiedtke", "freitas", "fristch"]
     cumulus = next((option for option in cumulus_options if option in expname), "off")
 
     pbl_options = ["ysu", "mynn"]
