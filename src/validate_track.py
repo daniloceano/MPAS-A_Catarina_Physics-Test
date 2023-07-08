@@ -107,7 +107,7 @@ def tracks_one_image(tracks, tracks_directory, figures_directory):
         exp = os.path.basename(trackfile).split('.csv')[0].split('track_')[1]
         if 'sst' in exp:
             exp = exp.split('sst_')[1]
-            
+
         if "off_" in exp: continue
 
         if "off_" in exp:
@@ -252,6 +252,8 @@ def minimum_slp_and_distance(tracks, tracks_directory, tracks_figures_directory,
         
         exp = os.path.basename(trackfile).split('.csv')[0].split('track_')[1]
         print(exp)
+        
+        if 'off_' in exp: continue
         
         track = pd.read_csv(trackfile, index_col=0)    
         track = track.loc[track_Cowan_sliced.index]
