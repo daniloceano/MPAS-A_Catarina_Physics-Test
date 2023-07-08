@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/03/14 18:14:06 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/07 20:04:36 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/07 22:09:17 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -46,6 +46,8 @@ def main(benchmarks_name, experiment_directory):
 
     stats = {}
     for file in stats_files:
+        if 'score-table' in file:
+            continue
         variable = os.path.basename(file).split('_')[0].split('.csv')[0]
         print(variable)
         
@@ -55,9 +57,6 @@ def main(benchmarks_name, experiment_directory):
         if 'ERA5' in tmp.index:
             tmp = tmp.drop('ERA5')
         
-        # indexes = tmp.index
-        # tmp.index = range(len(tmp))
-        
         if 'rmse' in tmp.columns:
             stats[variable] = tmp['rmse']
         else:
@@ -65,7 +64,6 @@ def main(benchmarks_name, experiment_directory):
                 stats[col] = tmp[col]
         
     df = pd.DataFrame.from_dict(stats)
-    # df.index = indexes
     df['mean'] = df.mean(axis=1)
     
     sns_heatmap(df, figures_directory)
