@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    score-table.py                                     :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
+#    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/03/14 18:14:06 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/07 22:09:17 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/08 12:29:01 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -27,7 +27,7 @@ def sns_heatmap(data, figures_directory):
                                     DiscreteColors, len(DiscreteColors))
     plt.close('all')
     f, ax = plt.subplots(figsize=(10, 10))
-    sns.heatmap(data, annot=False, linewidths=.5, ax=ax, cmap=cmap)
+    sns.heatmap(data, annot=True, fmt='.2f', linewidths=.5, ax=ax, cmap=cmap)
 
 
     plt.title('scores')
