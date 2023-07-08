@@ -26,13 +26,11 @@ colors = {'ERA':'k', 'fritsch':'tab:orange','tiedtke':'tab:red',
           'Cowan': 'k'}
 
 lines = {'ERA':'solid', 'wsm6':'dashed','thompson':'dashdot',
-         'kessler':(0, (3, 1, 1, 1)),'off':(0, (3, 1, 1, 1, 1, 1)),
-         'Cowan':'solid'}
+         'kessler':(0, (3, 1, 1, 1)),'Cowan':'solid'}
 
 lines_bl = {'ERA':'solid', 'Cowan':'solid', 'ysu':'dashed', 'mynn':'dashdot'}
 
-markers = {'ERA':'s', 'wsm6':'x', 'thompson':'P','kessler':'D','off':'^',
-           'Cowan':'o'}
+markers = {'ERA':'s', 'wsm6':'x', 'thompson':'P','kessler':'D','Cowan':'o'}
 
 datacrs = ccrs.PlateCarree()
 
@@ -110,6 +108,8 @@ def tracks_one_image(tracks, tracks_directory, figures_directory):
         if 'sst' in exp:
             exp = exp.split('sst_')[1]
         print(f'Plotting tracks for {exp}...')
+        if "off_" in exp: continue
+        if "off_" in exp: print('skipping', exp)
         
         track = pd.read_csv(trackfile, index_col=0)
         track = track.loc[track_Cowan_sliced.index]
@@ -192,6 +192,7 @@ def tracks_subplots(tracks, tracks_dir, figures_directory):
             cumulus = expname.split('_')[1]
             experiment = microp+'_'+cumulus
             print(experiment)
+            if microp == 'off': continue
             
             ax.text(-50,-22,experiment,bbox=dict(facecolor='w', alpha=0.5))
             
@@ -287,6 +288,8 @@ def minimum_slp_and_distance(tracks, tracks_directory, tracks_figures_directory,
             ls = lines_bl[bl]
         else:
             ls = lines[microp]
+
+        if microp == 'off': continue
 
         marker = markers[microp]
         color = colors[cumulus]
