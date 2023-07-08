@@ -251,6 +251,7 @@ def main(args):
         print('\n', 'processing track for', experiment_name)
         
         if "off_" in experiment_name: continue
+        if "off_" in experiment_name: print('skipping', experiment_name)
 
         model_data  = open_model_dataset(bench, times=times)
 
