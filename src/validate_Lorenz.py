@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/30 13:23:07 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/07 20:40:30 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/07 21:18:48 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -42,11 +42,15 @@ def get_exp_name(experiment):
     """
     expname = os.path.basename(experiment)
 
-    microp_options = ["thompson", "kessler", "wsm6"]
-    microp = next((option for option in microp_options if option in expname), "off")
+    microp_options = ["thompson", "kessler", "wsm6", "off"]
+    microp = next((option for option in microp_options if option in expname), None)
+    if microp is None:
+        raise ValueError("Microp option not found in experiment name.")
 
-    cumulus_options = ["ntiedtke", "tiedtke", "freitas", "fristch"]
-    cumulus = next((option for option in cumulus_options if option in expname), "off")
+    cumulus_options = ["ntiedtke", "tiedtke", "freitas", "fritsch", "off"]
+    cumulus = next((option for option in cumulus_options if option in expname), None)
+    if cumulus is None:
+        raise ValueError("Cumulus option not found in experiment name.")
 
     pbl_options = ["ysu", "mynn"]
     pbl = next((option for option in pbl_options if option in expname), None)

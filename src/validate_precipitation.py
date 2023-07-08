@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/07 20:48:45 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/07 21:47:30 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -98,11 +98,15 @@ def get_exp_name(experiment):
     """
     expname = os.path.basename(experiment)
 
-    microp_options = ["thompson", "kessler", "wsm6"]
-    microp = next((option for option in microp_options if option in expname), "off")
+    microp_options = ["thompson", "kessler", "wsm6", "off"]
+    microp = next((option for option in microp_options if option in expname), None)
+    if microp is None:
+        raise ValueError("Microp option not found in experiment name.")
 
-    cumulus_options = ["ntiedtke", "tiedtke", "freitas", "fristch"]
-    cumulus = next((option for option in cumulus_options if option in expname), "off")
+    cumulus_options = ["ntiedtke", "tiedtke", "freitas", "fritsch", "off"]
+    cumulus = next((option for option in cumulus_options if option in expname), None)
+    if cumulus is None:
+        raise ValueError("Cumulus option not found in experiment name.")
 
     pbl_options = ["ysu", "mynn"]
     pbl = next((option for option in pbl_options if option in expname), None)
@@ -169,10 +173,14 @@ def process_experiment_data(data, experiment, experiment_name, imerg_accprec, ti
     stats = sm.taylor_statistics(imerg_accprec.values.ravel(),
                                  interp.values.ravel())
     
+    ccoef = stats['ccoef'][1]
+    if np.isnan(ccoef):
+        ccoef = 0
+    
     data[experiment_name] = {
         'data': acc_prec,
         'interp': interp,
-        'ccoef': stats['ccoef'][1],
+        'ccoef': ccoef,
         'crmsd': stats['crmsd'][1],
         'sdev': stats['sdev'][1],
         'willmot_d_index': willmot_d_index(imerg_accprec.values.ravel(), interp.values.ravel())
@@ -456,13 +464,14 @@ def plot_taylor_diagrams(benchmarks_name, data, figures_directory):
     crmsd  = [data[exp]['crmsd'] for exp in data.keys() if exp != 'IMERG']
     sdev = [data[exp]['sdev'] for exp in data.keys() if exp != 'IMERG']
     d_index = [data[exp]['willmot_d_index'] for exp in data.keys() if exp != 'IMERG']
+    keys = [ exp for exp in data.keys() if exp != 'IMERG']
 
     ccoef, crmsd, sdev = np.array(ccoef),np.array(crmsd),np.array(sdev)
 
     print('plotting taylor diagrams..')
     fig = plt.figure(figsize=(10,10))
 
-    call_taylor_diagram(sdev,crmsd,ccoef,list(data.keys()))
+    call_taylor_diagram(sdev,crmsd,ccoef,keys)
 
     plt.tight_layout(w_pad=0.1)
 
@@ -521,6 +530,8 @@ def main(benchmarks_directory, benchmarks_name, experiment_directory, imerg_file
 
     ## Inputs ##
     experiments = glob.glob(benchmarks_directory+'/run*')
+    experiments = sorted(experiments)
+    
     stats_directory = os.path.join(experiment_directory, f'stats_{benchmarks_name}')
     figures_directory = os.path.join(experiment_directory, f'Figures_{benchmarks_name}')
 
