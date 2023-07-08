@@ -250,6 +250,8 @@ def main(args):
         experiment_name = get_experiment_name(bench)
         print('\n', 'processing track for', experiment_name)
         
+        if "off_" in experiment_name: continue
+
         model_data  = open_model_dataset(bench, times=times)
 
         surface_pressure = model_data['surface_pressure'] * units.Pa
