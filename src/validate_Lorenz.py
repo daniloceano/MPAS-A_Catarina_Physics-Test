@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    validate_Lorenz.py                                 :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
+#    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/30 13:23:07 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/07 21:53:17 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/08 12:40:34 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -80,6 +80,8 @@ def process_data(results_directory, experiments):
             microp, cumulus = experiment.split('_')
             pattern = f"*{microp}*{cumulus}*"
             outfile = glob.glob(f'{results_directory}/{pattern}/{pattern}*csv')[0]
+
+        if microp == 'off': continue
         
         df_exp = pd.read_csv(outfile, index_col=[0])
         df_exp['Datetime'] = pd.to_datetime(df_exp.Date) + pd.to_timedelta(
