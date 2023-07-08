@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/08 14:06:37 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/08 14:13:03 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -445,7 +445,7 @@ def plot_pdfs(data, imerg_accprec, benchmarks_name, experiments, figures_directo
                         density=True, histtype='step', label=experiment, zorder=100)
                 ax.set_yscale('log')  
                 ax.text
-                ax.text(50, len(reference)*.1,experiment)
+                ax.text(50, len(reference)*.05,experiment)
                 i+=1
                 
     fig.subplots_adjust(hspace=0.25)
