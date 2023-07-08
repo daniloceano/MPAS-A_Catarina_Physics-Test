@@ -29,21 +29,23 @@ class BenchData:
         self.data = self.data.assign_coords({"Time":times})
         
 
-    def get_exp_name(self, pbl=None):
+    def get_exp_name(self):
         expname = os.path.basename(self.bench)
-        if any(x in expname for x in ['ysu', 'mynn']):
-            _, _, microp, cumulus, pbl =  expname.split('.')
-            pbl = pbl.split('_')[-1]
-        elif "convection" in expname:
-            _, microp, cumulus = expname.split('.')
-        else:
-            _, _, microp, cumulus =  expname.split('.')
-        microp = microp.split('_')[-1]
-        cumulus = cumulus.split('_')[-1]
-        if pbl is not None:
-            return microp+'_'+cumulus+'_'+pbl
-        else:
-            return microp+'_'+cumulus
+
+        microp_options = ["thompson", "kessler", "wsm6", "off"]
+        microp = next((option for option in microp_options if option in expname), None)
+        if microp is None:
+            raise ValueError("Microp option not found in experiment name.")
+
+        cumulus_options = ["ntiedtke", "tiedtke", "freitas", "fritsch", "off"]
+        cumulus = next((option for option in cumulus_options if option in expname), None)
+        if cumulus is None:
+            raise ValueError("Cumulus option not found in experiment name.")
+
+        pbl_options = ["ysu", "mynn"]
+        pbl = next((option for option in pbl_options if option in expname), None)
+
+        return f"{microp}_{cumulus}_{pbl}" if pbl else f"{microp}_{cumulus}"
         
 def interpolate_mpas_data(variable_data, target, reference):
     if reference == 'quickscat':
