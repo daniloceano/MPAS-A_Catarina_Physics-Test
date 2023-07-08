@@ -140,6 +140,9 @@ def main(benchmarks_directory, benchmarks_name, experiment_directory, quickscat_
     for benchmark in benchmarks:
         exp_name = benchmark.get_exp_name()
         print('\n',exp_name)
+
+        if 'off_' in exp_name: continue
+
         data[exp_name] = {}
         
         for model_var, reference_var in zip(['u10','v10','windspeed'],
