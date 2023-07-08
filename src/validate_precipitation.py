@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/08 12:51:09 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/08 13:26:19 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -323,6 +323,8 @@ def plot_precipitation_panels(
             experiment = experiments[i]
             experiment = get_exp_name(experiment)
             print('\n',experiment)
+
+            if 'off_' in experiment: continue
             
             prec = data[experiment]['data']
             prec_interp = data[experiment]['interp']
