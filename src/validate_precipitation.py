@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    validate_precipitation.py                          :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
+#    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/07 21:47:30 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/08 12:51:09 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -560,6 +560,8 @@ def main(benchmarks_directory, benchmarks_name, experiment_directory, imerg_file
     for experiment in experiments:
         experiment_name = get_exp_name(experiment)
         print('\n', experiment_name)
+
+        if 'off_' in experiment_name: continue
         
         data = process_experiment_data(data, experiment, experiment_name, imerg_accprec, parameters["times"])
 
