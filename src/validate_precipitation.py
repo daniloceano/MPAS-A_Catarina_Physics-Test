@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/08 13:49:31 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/08 14:06:37 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -249,7 +249,10 @@ def define_figure_parameters(benchmarks_name):
     Returns:
         tuple: A tuple containing the values of ncol, nrow, imax, and figsize.
     """
-    if (benchmarks_name == '48h_sst') or (benchmarks_name == '72h_sst'):
+    if benchmarks_name == '48h':
+        ncol, nrow, imax = 3, 5, 14
+        figsize = (10, 10)
+    elif (benchmarks_name == '48h_sst') or (benchmarks_name == '72h_sst'):
         ncol, nrow, imax = 2, 2, 3
         figsize = (10, 12)
     elif benchmarks_name == '48h_pbl':
@@ -382,7 +385,7 @@ def plot_imerg_precipitation(imerg_accprec, imerg_file, figures_directory):
 
     cf = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,
                     imerg_accprec, cmap=cmo.rain,
-                    levels=np.arange(0,imerg_accprec.max()+2,2))
+                    levels=np.arange(0, imerg_accprec.max()*0.8, 20))
     
     fig.colorbar(cf, ax=ax, fraction=0.03, pad=0.1)
     ax.coastlines(zorder = 1)
