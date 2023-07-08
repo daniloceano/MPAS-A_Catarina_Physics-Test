@@ -107,9 +107,13 @@ def tracks_one_image(tracks, tracks_directory, figures_directory):
         exp = os.path.basename(trackfile).split('.csv')[0].split('track_')[1]
         if 'sst' in exp:
             exp = exp.split('sst_')[1]
-        print(f'Plotting tracks for {exp}...')
+            
         if "off_" in exp: continue
-        if "off_" in exp: print('skipping', exp)
+
+        if "off_" in exp:
+            print('skipping', exp)
+        else:
+            print(f'Plotting tracks for {exp}...')
         
         track = pd.read_csv(trackfile, index_col=0)
         track = track.loc[track_Cowan_sliced.index]
