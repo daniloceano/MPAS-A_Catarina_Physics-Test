@@ -246,7 +246,7 @@ def main(args):
         slp = slp.sel(Time=track_Cowan_sliced.index)
         
         track = get_track(slp, 'Time')
-        track_path = os.path.join(args.output_directory, f'trak_{experiment_name}')
+        track_path = os.path.join(args.output_directory, f'track_{experiment_name}.csv')
         track.to_csv(track_path)
         print(f'{track_path} saved')
 
