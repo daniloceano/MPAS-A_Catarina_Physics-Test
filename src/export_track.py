@@ -180,7 +180,12 @@ def calculate_distance(row):
     """
     start = (row['lat_ref'], row['lon_ref'])
     end = (row['lat_model'], row['lon_model'])
-    return geodesic(start, end).km  
+    
+    if any(np.isnan(coord) for coord in start) or any(np.isnan(coord) for coord in end):
+        print(f"Row with NaN coordinates: {row}")
+        return np.nan
+    
+    return geodesic(start, end).km
 
 def process_track(track, track_Cowan_sliced, experiment_name):
 
@@ -193,7 +198,6 @@ def process_track(track, track_Cowan_sliced, experiment_name):
 
      df_dist = df_dist.loc[track_Cowan_sliced.index]
      track = track.dropna()
-     print(track)
      track['distance'] =  df_dist.apply(lambda row: calculate_distance(row), axis=1)
 
      track_name =  f'track_{experiment_name}.csv'
