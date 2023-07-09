@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/30 13:23:07 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/08 12:40:34 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/09 16:39:15 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -228,6 +228,6 @@ def main(results_directory):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("results_directory", nargs="?", default='../experiments_48h/LEC_Results_48h/',
-                        help="Path to the tracks directory")
+                        help="Path to the LEC results directory")
     args = parser.parse_args()
     main(args.results_directory)
