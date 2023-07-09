@@ -131,7 +131,7 @@ def tracks_one_image(tracks, tracks_directory, figures_directory):
         else:
             if any(substring in exp for substring in ['ysu', 'mynn']):
                     if "freitas" in exp:
-                        print(f"\nDEBUG: {exp.split('_')}")
+                        print(f"\nDEBUG: {exp} \n {exp.split('_')}")
                         microp, _, cumulus, bl = exp.split('_')
                     else:
                         microp, cumulus, bl = exp.split('_')
