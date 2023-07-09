@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/09 16:55:47 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/09 17:37:11 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -254,7 +254,7 @@ def define_figure_parameters(benchmarks_name):
         figsize = (10, 10)
     elif (benchmarks_name == '48h_sst') or (benchmarks_name == '96h_sst'):
         ncol, nrow, imax = 2, 2, 3
-        figsize = (10, 12)
+        figsize = (10, 8)
     elif benchmarks_name == '48h_pbl':
         ncol, nrow, imax = 3, 4, 11
         figsize = (8, 8)
