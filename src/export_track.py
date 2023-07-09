@@ -168,26 +168,6 @@ def get_track(slp, TimeIndexer):
     track.index = times
     return track
 
-def process_track(track, track_Cowan_sliced, experiment_name):
-    
-    df_dist = pd.DataFrame({
-        'lat_ref': track_Cowan_sliced.lat,
-        'lon_ref': track_Cowan_sliced.lon,
-        'lat_model': track.lat,
-        'lon_model': track.lon
-    })
-
-    df_dist = df_dist.loc[track_Cowan_sliced.index]
-    track = track.dropna()
-    print(track)
-    track['distance'] =  df_dist.apply(lambda row: calculate_distance(row), axis=1)
-
-    track_name =  f'track_{experiment_name}.csv'
-    track_path = os.path.join(args.output_directory, track_name)
-    track.to_csv(track_path)
-    print(f"{track_path} saved")  
-    return track
-
 def calculate_distance(row):
     """
     Calculate the distance between two coordinates in kilometers.
@@ -246,7 +226,6 @@ def main(args):
 
     era_track = get_track(mslp, 'time')
     print(f'\n ERA5 track: {era_track}')
-    #era_track_processed = process_track(era_track, track_Cowan_sliced, 'ERA5')  
                         
     for bench in benchs:
         experiment_name = get_experiment_name(bench)
@@ -267,9 +246,9 @@ def main(args):
         slp = slp.sel(Time=track_Cowan_sliced.index)
         
         track = get_track(slp, 'Time')
-        print(f'\n {experiment_name} track: {track}')
-        #track_processed = process_track(track, track_Cowan_sliced, experiment_name)  
-
+        track_path = os.path.join(args.output_directory, f'trak_{experiment_name}')
+        track.to_csv(track_path)
+        print(f'{track_path} saved')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
