@@ -116,6 +116,7 @@ def tracks_one_image(tracks, tracks_directory, figures_directory):
             print(f'Plotting tracks for {exp}...')
         
         track = pd.read_csv(trackfile, index_col=0)
+        print(f"\n DEBUG: {track} \n {track_Cowan_sliced}")
         track = track.loc[track_Cowan_sliced.index]
         lons, lats = track['lon'], track['lat']
         
