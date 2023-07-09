@@ -45,6 +45,7 @@ def get_experiment_name(bench, pbl=None):
     elif "convection" in expname:
         _, microp, cumulus = expname.split('.')
     else:
+        print(expname)
         _, _, microp, cumulus =  expname.split('.')
     microp = microp.split('_')[-1]
     cumulus = cumulus.split('_')[-1]
