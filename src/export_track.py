@@ -224,8 +224,9 @@ def main(args):
     # open data and namelist
     print('openinning first bench just to get dates...')
     model_data = open_model_dataset(benchs[0])
+    print(model_data)
     namelist = f90nml.read(glob.glob(namelist_path)[0])
-    times = get_simulation_times(namelist,model_data.compute()).tolist()
+    times = get_simulation_times(namelist,model_data.UReconstructZonal.compute()).tolist()
     first_day = datetime.datetime.strftime(times[0], '%Y-%m-%d %HZ')
     last_day = datetime.datetime.strftime(times[-1], '%Y-%m-%d %HZ')                      
     print('Analysis is from',first_day,'to',last_day)  
