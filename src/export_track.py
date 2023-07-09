@@ -45,7 +45,6 @@ def get_experiment_name(bench, pbl=None):
     elif "convection" in expname:
         _, microp, cumulus = expname.split('.')
     else:
-        print(f"\nDEBUG: {expname.split('.')}\n")
         _, _, microp, cumulus =  expname.split('.')
     microp = microp.split('_')[-1]
     cumulus = cumulus.split('_')[-1]
@@ -245,7 +244,8 @@ def main(args):
     track_Cowan = pd.read_csv(os.path.join(args.output_directory, 'track_Cowan.csv'), index_col=0)
     track_Cowan_sliced = track_Cowan.loc[slice(first_day, last_day)]  
 
-    era_track = get_track(mslp, 'time') 
+    era_track = get_track(mslp, 'time')
+    print(f'\n ERA5 track: {era_track}')
     #era_track_processed = process_track(era_track, track_Cowan_sliced, 'ERA5')  
                         
     for bench in benchs:
@@ -267,6 +267,7 @@ def main(args):
         slp = slp.sel(Time=track_Cowan_sliced.index)
         
         track = get_track(slp, 'Time')
+        print(f'\n {experiment_name} track: {track}')
         #track_processed = process_track(track, track_Cowan_sliced, experiment_name)  
 
 
