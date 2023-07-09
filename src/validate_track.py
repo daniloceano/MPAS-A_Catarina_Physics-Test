@@ -130,6 +130,7 @@ def tracks_one_image(tracks, tracks_directory, figures_directory):
             
         else:
             if any(substring in exp for substring in ['ysu', 'mynn']):
+                    print(f"\nDEBUG: {exp.split('_')}")
                     microp, cumulus, bl = exp.split('_')
             else:
                 microp, cumulus = exp.split('_')[0], exp.split('_')[1]
