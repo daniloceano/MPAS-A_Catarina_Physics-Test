@@ -179,6 +179,7 @@ def process_track(track, track_Cowan_sliced, experiment_name):
 
     df_dist = df_dist.loc[track_Cowan_sliced.index]
     track = track.dropna()
+    print(track)
     track['distance'] =  df_dist.apply(lambda row: calculate_distance(row), axis=1)
 
     track_name =  f'track_{experiment_name}.csv'
@@ -244,7 +245,7 @@ def main(args):
     track_Cowan_sliced = track_Cowan.loc[slice(first_day, last_day)]  
 
     era_track = get_track(mslp, 'time') 
-    era_track_processed = process_track(era_track, track_Cowan_sliced, 'ERA5')  
+    #era_track_processed = process_track(era_track, track_Cowan_sliced, 'ERA5')  
                         
     for bench in benchs:
         experiment_name = get_experiment_name(bench)
@@ -265,7 +266,7 @@ def main(args):
         slp = slp.sel(Time=track_Cowan_sliced.index)
         
         track = get_track(slp, 'Time')
-        track_processed = process_track(track, track_Cowan_sliced, experiment_name)  
+        #track_processed = process_track(track, track_Cowan_sliced, experiment_name)  
 
 
 if __name__ == '__main__':
