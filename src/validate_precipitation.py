@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/10 16:47:44 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/10 17:23:57 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -33,6 +33,10 @@ from matplotlib import rcParams
 prec_levels = [0.1, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220]
 cmap_precipitation = colors.ListedColormap(['#D3E6F1','#2980B9', '#A9DFBF','#196F3D',
     '#F9E79F', '#F39C12', '#f37012', '#E74C3C', '#943126', '#E6B0AA', '#7a548e'], N=len(prec_levels)-1)
+
+bias_levels = [250, 200, 150, 100, 50, 0, -50, -100, -150, -200, -250, -300][::-1]
+cmap_bias = colors.ListedColormap(['#9eb3c2', '#1c7293', '#065a82','#1b3b6f' '#21295c',
+                '#F9E79F', '#F39C12', '#f37012','#E74C3C' '#943126', '#691c14'][::-1], N=len(prec_levels)-1)
 
 def get_times_nml(namelist, model_data):
     """
@@ -298,8 +302,7 @@ def configure_gridlines(ax, col, row):
     gl.left_labels = None if col != 0 else gl.left_labels
 
 def plot_precipitation_panels(
-        data, imerg_accprec, experiments, benchmarks_name,
-          figures_directory, bias_levels, bias_norm, bias_flag=False):
+        data, imerg_accprec, experiments, benchmarks_name, figures_directory, bias_flag=False):
     """
     Plot precipitation panels for the given benchmarks.
 
@@ -350,8 +353,7 @@ def plot_precipitation_panels(
                 print('Plotting bias..')
                 bias = prec_interp-imerg_accprec
                 cf = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,bias,
-                                    cmap=cmo.balance_r,
-                                    levels=bias_levels, norm=bias_norm)
+                                    cmap= cmap_bias, levels=bias_levels)
                 print('bias limits:',float(bias.min()), float(bias.max()))
             ax.coastlines(zorder = 1)
             i+=1
@@ -588,14 +590,13 @@ def main(benchmarks_directory, benchmarks_name, experiment_directory, imerg_file
         max_bias = max(max_bias, experiment_maximum_bias)
         min_bias = min(min_bias, experiment_minimum_bias)
 
-    bias_levels = np.arange(min_bias*0.6,max_bias*0.6,20)
-    bias_norm = colors.TwoSlopeNorm(vmin=min_bias*0.6, vcenter=0, vmax=max_bias*0.6)
+    # bias_levels = np.arange(min_bias*0.6,max_bias*0.6,20)
+    # bias_norm = colors.TwoSlopeNorm(vmin=min_bias*0.6, vcenter=0, vmax=max_bias*0.6)
 
     ## Make plots
-    plot_precipitation_panels(data, imerg_accprec, experiments, benchmarks_name,
-                                figures_directory, bias_levels, bias_norm)
-    plot_precipitation_panels(data, imerg_accprec, experiments, benchmarks_name,
-                                figures_directory, bias_levels, bias_norm, bias_flag=True)
+    #plot_precipitation_panels(data, imerg_accprec, experiments, benchmarks_name, figures_directory)
+    plot_precipitation_panels(data, imerg_accprec, experiments, benchmarks_name, 
+                                                    figures_directory, bias_flag=True)
     plot_imerg_precipitation(imerg_accprec, imerg_file, figures_directory)
     plot_pdfs(data, imerg_accprec, benchmarks_name, experiments, figures_directory)
     crmsd, ccoef, d_index = plot_taylor_diagrams(benchmarks_name, data, figures_directory)
