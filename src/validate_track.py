@@ -116,8 +116,6 @@ def tracks_one_image(tracks, tracks_directory, figures_directory):
             print(f'Plotting tracks for {exp}...')
         
         track = pd.read_csv(trackfile, index_col=0)
-        print(f"\n DEBUG: {track} \n {track_Cowan_sliced}")
-        track = track.loc[track_Cowan_sliced.index]
         lons, lats = track['lon'], track['lat']
         
         
@@ -131,11 +129,7 @@ def tracks_one_image(tracks, tracks_directory, figures_directory):
             
         else:
             if any(substring in exp for substring in ['ysu', 'mynn']):
-                    if "freitas" in exp:
-                        print(f"\nDEBUG: {exp} \n {exp.split('_')}")
-                        microp, _, cumulus, bl = exp.split('_')
-                    else:
-                        microp, cumulus, bl = exp.split('_')
+                microp, cumulus, bl = exp.split('_')
             else:
                 microp, cumulus = exp.split('_')[0], exp.split('_')[1]
                 bl = None
@@ -246,7 +240,8 @@ def minimum_slp_and_distance(tracks, tracks_directory, tracks_figures_directory,
     distances = {}
     mins = {}
     
-    track_dummy = pd.read_csv(tracks[0], index_col=0)
+    track_file_dummy = next(track for track in tracks if not track.endswith('track_ERA5.csv') and not track.endswith('track_Cowan.csv'))
+    track_dummy = pd.read_csv(track_file_dummy, index_col=0)
     track_Cowan = pd.read_csv(f'{tracks_directory}/track_Cowan.csv', index_col=0)
     track_Cowan_sliced = track_Cowan.loc[slice(track_dummy.index[0],track_dummy.index[-1])]
     
@@ -279,10 +274,7 @@ def minimum_slp_and_distance(tracks, tracks_directory, tracks_figures_directory,
             x_label_color = 'black'
 
             if any(substring in exp for substring in ['ysu', 'mynn']):
-                if 'freitas' in exp:
-                    microp, _, cumulus, bl = exp.split('_')
-                else:
-                    microp, cumulus, bl = exp.split('_')
+                microp, cumulus, bl = exp.split('_')
 
             elif any(substring in exp for substring in 'ERA'):
                 microp, cumulus, bl, zorder = 'ERA', 'ERA', 'ERA', 100
@@ -397,7 +389,7 @@ def main(tracks_directory):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("tracks_directory", nargs="?", default="../experiments_48h/tracks_48h/",
+    parser.add_argument("tracks_directory", nargs="?", default="../experiments_48h/tracks_48h_pbl/",
                         help="Path to the tracks directory")
     args = parser.parse_args()
 
