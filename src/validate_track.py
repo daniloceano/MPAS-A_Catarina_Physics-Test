@@ -342,9 +342,6 @@ def bar_plot_distances(df, fname):
     if 'slp' in fname:
         plt.ylim(990,1015)
         ax.axhline(df_sns['values'].min(),color='gray',alpha=0.6)
-    else:
-        plt.ylim(round(df_sns['mean'].min()-50,-1),
-                  round(df_sns['mean'].max()+50,-1))
     
     plt.savefig(fname, dpi=500)
     print(fname,'created!')
