@@ -389,7 +389,7 @@ def main(tracks_directory):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("tracks_directory", nargs="?", default="../experiments_48h/tracks_48h_pbl/",
+    parser.add_argument("tracks_directory", nargs="?", default="../experiments_48h/tracks_48h/",
                         help="Path to the tracks directory")
     args = parser.parse_args()
 
