@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    validate_precipitation.py                          :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
+#    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/09 17:37:11 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/10 16:47:44 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -29,6 +29,10 @@ import matplotlib.colors as colors
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
+
+prec_levels = [0.1, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220]
+cmap_precipitation = colors.ListedColormap(['#D3E6F1','#2980B9', '#A9DFBF','#196F3D',
+    '#F9E79F', '#F39C12', '#f37012', '#E74C3C', '#943126', '#E6B0AA', '#7a548e'], N=len(prec_levels)-1)
 
 def get_times_nml(namelist, model_data):
     """
@@ -295,7 +299,7 @@ def configure_gridlines(ax, col, row):
 
 def plot_precipitation_panels(
         data, imerg_accprec, experiments, benchmarks_name,
-          figures_directory, prec_levels, bias_levels, bias_norm, bias_flag=False):
+          figures_directory, bias_levels, bias_norm, bias_flag=False):
     """
     Plot precipitation panels for the given benchmarks.
 
@@ -340,7 +344,7 @@ def plot_precipitation_panels(
             if bias_flag == False:
                 print('Plotting accumulate prec..')
                 cf = ax.contourf(prec.longitude, prec.latitude, prec,
-                                    cmap=cmo.rain, levels=prec_levels)
+                                    cmap=cmap_precipitation, levels=prec_levels)
                 print('prec limits:',float(prec.min()), float(prec.max()))
             else:
                 print('Plotting bias..')
@@ -384,8 +388,8 @@ def plot_imerg_precipitation(imerg_accprec, imerg_file, figures_directory):
     configure_gridlines(ax, 5, 0)
 
     cf = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,
-                    imerg_accprec, cmap=cmo.rain,
-                    levels=np.arange(0, imerg_accprec.max()*0.8, 20))
+                    imerg_accprec, cmap=cmap_precipitation,
+                    levels=prec_levels)
     
     fig.colorbar(cf, ax=ax, fraction=0.03, pad=0.1)
     ax.coastlines(zorder = 1)
@@ -584,15 +588,14 @@ def main(benchmarks_directory, benchmarks_name, experiment_directory, imerg_file
         max_bias = max(max_bias, experiment_maximum_bias)
         min_bias = min(min_bias, experiment_minimum_bias)
 
-    prec_levels = np.arange(0,max_precipitation*0.8,20)
     bias_levels = np.arange(min_bias*0.6,max_bias*0.6,20)
     bias_norm = colors.TwoSlopeNorm(vmin=min_bias*0.6, vcenter=0, vmax=max_bias*0.6)
 
     ## Make plots
     plot_precipitation_panels(data, imerg_accprec, experiments, benchmarks_name,
-                                figures_directory, prec_levels, bias_levels, bias_norm)
+                                figures_directory, bias_levels, bias_norm)
     plot_precipitation_panels(data, imerg_accprec, experiments, benchmarks_name,
-                                figures_directory, prec_levels, bias_levels, bias_norm, bias_flag=True)
+                                figures_directory, bias_levels, bias_norm, bias_flag=True)
     plot_imerg_precipitation(imerg_accprec, imerg_file, figures_directory)
     plot_pdfs(data, imerg_accprec, benchmarks_name, experiments, figures_directory)
     crmsd, ccoef, d_index = plot_taylor_diagrams(benchmarks_name, data, figures_directory)
