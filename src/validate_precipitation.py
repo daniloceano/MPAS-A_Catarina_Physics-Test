@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/11 15:08:47 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/11 16:49:03 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -351,7 +351,7 @@ def plot_precipitation_panels(
             configure_gridlines(ax, col, row)
             
             if bias_flag == False:
-                cf = ax.contourf(prec.longitude, prec.latitude, prec,
+                cf = ax.contourf(prec.longitude, prec.latitude, prec, extend='max',
                                     cmap=cmap_precipitation, levels=prec_levels)
             else:
                 bias = prec_interp-imerg_accprec
@@ -608,16 +608,16 @@ def main(benchmarks_directory, benchmarks_name, experiment_directory, imerg_file
     bias_norm = colors.TwoSlopeNorm(vmin=min_bias, vcenter=0, vmax=max_bias)
 
     ## Make plots
-    #plot_precipitation_panels(data, imerg_accprec, experiments, benchmarks_name, figures_directory)
+    plot_precipitation_panels(data, imerg_accprec, experiments, benchmarks_name, figures_directory)
     plot_precipitation_panels(data, imerg_accprec, experiments, benchmarks_name, figures_directory,
                                bias_flag=True, bias_levels=bias_levels, bias_norm=bias_norm)
-    #plot_imerg_precipitation(imerg_accprec, imerg_file, figures_directory)
+    plot_imerg_precipitation(imerg_accprec, imerg_file, figures_directory)
 
-    #plot_pdfs(data, imerg_accprec, benchmarks_name, experiments, figures_directory)
+    plot_pdfs(data, imerg_accprec, benchmarks_name, experiments, figures_directory)
 
-    #crmsd, ccoef, d_index = plot_taylor_diagrams(benchmarks_name, data, figures_directory)
-    #df_stats, df_stats_normalised = precipitation_statistics_to_csv(data, crmsd, ccoef, d_index, stats_directory)
-    #plot_precipitation_statistics(df_stats, df_stats_normalised, benchmarks_name, figures_directory)
+    crmsd, ccoef, d_index = plot_taylor_diagrams(benchmarks_name, data, figures_directory)
+    df_stats, df_stats_normalised = precipitation_statistics_to_csv(data, crmsd, ccoef, d_index, stats_directory)
+    plot_precipitation_statistics(df_stats, df_stats_normalised, benchmarks_name, figures_directory)
 
 if __name__ == '__main__':
 
