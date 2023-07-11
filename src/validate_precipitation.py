@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/11 09:35:11 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/11 09:42:12 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -596,8 +596,8 @@ def main(benchmarks_directory, benchmarks_name, experiment_directory, imerg_file
         max_bias = max(max_bias, experiment_maximum_bias)
         min_bias = min(min_bias, experiment_minimum_bias)
 
-    bias_levels = np.arange(min_bias,max_bias,20)
-    bias_norm = colors.TwoSlopeNorm(vmin=min_bias, vcenter=0, vmax=max_bias)
+    bias_levels = np.arange(round(min_bias),round(max_bias),50)
+    bias_norm = colors.TwoSlopeNorm(vmin=round(min_bias), vcenter=0, vmax=round(max_bias))
 
     ## Make plots
     plot_precipitation_panels(data, imerg_accprec, experiments, benchmarks_name, figures_directory)
