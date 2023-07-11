@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/11 16:49:03 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/11 16:50:31 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -397,7 +397,7 @@ def plot_imerg_precipitation(imerg_accprec, imerg_file, figures_directory):
 
     cf = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,
                     imerg_accprec, cmap=cmap_precipitation,
-                    levels=prec_levels)
+                    levels=prec_levels, extend='max')
     
     fig.colorbar(cf, ax=ax, fraction=0.03, pad=0.1)
     ax.coastlines(zorder = 1)
