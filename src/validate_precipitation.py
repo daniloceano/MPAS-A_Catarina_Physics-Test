@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/11 11:18:05 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/11 11:21:01 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -179,9 +179,8 @@ def process_experiment_data(data, experiment, experiment_name, imerg_accprec, ti
     )
     interp =  acc_prec_interp.where(acc_prec_interp >=0, 0).transpose('lat', 'lon')
     
-    print('limits for prec data:',float(acc_prec.min()),float(acc_prec.max()))
-    print('limits for interp prec data:',float(acc_prec_interp.min()),
-          float(acc_prec_interp.max()))
+    print(f'limits for {experiment_name}: {acc_prec.min()} - {acc_prec}.max()')
+    print(f'limits for {experiment_name} interpolated: {acc_prec_interp.min()} - {acc_prec_interp.max()}')
     
     stats = sm.taylor_statistics(imerg_accprec.values.ravel(),
                                  interp.values.ravel())
@@ -594,7 +593,7 @@ def main(benchmarks_directory, benchmarks_name, experiment_directory, imerg_file
         max_precipitation = max(max_precipitation, experiment_max)
         max_bias = max(max_bias, experiment_maximum_bias)
         min_bias = min(min_bias, experiment_minimum_bias)
-        print(f"min bias = {min_bias}, max bias = {max_bias}")
+        print(f"{experiment_name} min bias, max bias: {min_bias} - {max_bias}")
 
     print(f"\nGlobal min bias = {min_bias}, global max bias = {max_bias}")
     min_bias, max_bias = round(min_bias*.6, -1), round(max_bias*.6, -1)
