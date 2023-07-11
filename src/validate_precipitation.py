@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/11 09:29:14 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/11 09:35:11 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -36,7 +36,7 @@ cmap_precipitation = colors.ListedColormap(['#D3E6F1','#2980B9', '#A9DFBF','#196
     '#F9E79F', '#F39C12', '#f37012', '#E74C3C', '#943126', '#E6B0AA', '#7a548e'], N=len(prec_levels)-1)
 
 bias_colors = ['#943126', '#E74C3C', '#f37012', '#F39C12', '#F9E79F',
-               '#F8F2DB','white', '#d8edf0',
+               'white',
                 '#9eb3c2', '#1c7293', '#065a82', '#1b3b6f', '#21295c']
 # cmap_bias = colors.ListedColormap(bias_colors, N=len(prec_levels)-1)
 cmap_bias = matplotlib.colors.LinearSegmentedColormap.from_list("", bias_colors)
