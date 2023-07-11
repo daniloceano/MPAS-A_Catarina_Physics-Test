@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    validate_precipitation.py                          :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
+#    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/11 11:29:12 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/11 15:05:19 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -363,12 +363,14 @@ def plot_precipitation_panels(
             i+=1
 
     cb_axes = fig.add_axes([0.85, 0.18, 0.04, 0.6])
-    fig.colorbar(cf, cax=cb_axes, orientation="vertical") 
+     
     fig.subplots_adjust(wspace=0.1,hspace=0, right=0.8)
 
     if bias_flag == False:
+        cbar = fig.colorbar(cf, cax=cb_axes, orientation="vertical")
         fname = f"{figures_directory}/{benchmarks_name}_acc_prec.png"
     else:
+        cbar = fig.colorbar(cf, cax=cb_axes, orientation="vertical", ticks=bias_levels)
         fname = f"{figures_directory}/{benchmarks_name}_acc_prec_bias.png"
     fig.savefig(fname, dpi=500)
     print(fname,'saved')
@@ -602,7 +604,7 @@ def main(benchmarks_directory, benchmarks_name, experiment_directory, imerg_file
     else:
         max_bias = -min_bias
     print(f"Processed min bias = {min_bias}, updated max bias = {max_bias}")
-    bias_levels = np.arange(min_bias, max_bias, 25)
+    bias_levels = np.arange(min_bias, max_bias, 20)
     bias_norm = colors.TwoSlopeNorm(vmin=min_bias, vcenter=0, vmax=max_bias)
 
     ## Make plots
