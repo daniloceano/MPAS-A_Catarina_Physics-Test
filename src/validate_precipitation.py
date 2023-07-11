@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/11 11:21:01 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/11 11:24:00 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -357,8 +357,9 @@ def plot_precipitation_panels(
             else:
                 bias = prec_interp-imerg_accprec
                 cf = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,bias,
-                                    cmap=cmap_bias, levels=prec_levels,
-                                    norm=bias_norm)
+                                    cmap=cmap_bias, norm=bias_norm, extend='both',
+                                    vmin=min(bias_levels), vmax=max(bias_levels))
+                
             ax.coastlines(zorder = 1)
             i+=1
 
@@ -602,7 +603,7 @@ def main(benchmarks_directory, benchmarks_name, experiment_directory, imerg_file
     else:
         max_bias = -min_bias
     print(f"Processed min bias = {min_bias}, updated max bias = {max_bias}")
-    bias_levels = np.arange(min_bias,max_bias,25)
+    bias_levels = np.arange(min_bias, max_bias, 25)
     bias_norm = colors.TwoSlopeNorm(vmin=min_bias, vcenter=0, vmax=max_bias)
 
     ## Make plots
