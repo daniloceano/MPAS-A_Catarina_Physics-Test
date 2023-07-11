@@ -6,7 +6,7 @@
 #    By: Danilo <danilo.oceano@gmail.com>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/11 15:05:19 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/11 15:08:47 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -604,7 +604,7 @@ def main(benchmarks_directory, benchmarks_name, experiment_directory, imerg_file
     else:
         max_bias = -min_bias
     print(f"Processed min bias = {min_bias}, updated max bias = {max_bias}")
-    bias_levels = np.arange(min_bias, max_bias, 20)
+    bias_levels = np.arange(min_bias, max_bias, 40)
     bias_norm = colors.TwoSlopeNorm(vmin=min_bias, vcenter=0, vmax=max_bias)
 
     ## Make plots
