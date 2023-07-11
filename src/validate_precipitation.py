@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/11 10:47:08 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/11 10:49:12 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -329,6 +329,8 @@ def plot_precipitation_panels(
     gs = gridspec.GridSpec(nrow, ncol)
     datacrs = ccrs.PlateCarree()
 
+    print('Plotting bias..') if bias_flag else print('Plotting accumulate prec..')
+
     i = 0
     for col in range(ncol):
         for row in range(nrow):
@@ -351,15 +353,13 @@ def plot_precipitation_panels(
             configure_gridlines(ax, col, row)
             
             if bias_flag == False:
-                print('Plotting accumulate prec..')
                 cf = ax.contourf(prec.longitude, prec.latitude, prec,
                                     cmap=cmap_precipitation, levels=prec_levels)
                 print('prec limits:',float(prec.min()), float(prec.max()))
             else:
-                print('Plotting bias..')
                 bias = prec_interp-imerg_accprec
                 cf = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,bias,
-                                    cmap= cmap_bias, levels=20, norm=bias_norm)
+                                    cmap=cmap_bias, levels=20, norm=bias_norm)
                 print('bias limits:',float(bias.min()), float(bias.max()))
             ax.coastlines(zorder = 1)
             i+=1
@@ -596,12 +596,13 @@ def main(benchmarks_directory, benchmarks_name, experiment_directory, imerg_file
         max_bias = max(max_bias, experiment_maximum_bias)
         min_bias = min(min_bias, experiment_minimum_bias)
 
+    print(f"min bias = {min_bias}, max bias = {max_bias}")
     min_bias, max_bias = round(min_bias*.6), round(max_bias*.6)
     if abs(min_bias) > abs(max_bias):
         min_bias = -max_bias
     else:
         max_bias = -min_bias
-    print(f"min bias = {min_bias}, max bias = {max_bias}")
+    print(f"updated min bias = {min_bias}, updated max bias = {max_bias}")
     bias_levels = np.arange(min_bias,max_bias,25)
     bias_norm = colors.TwoSlopeNorm(vmin=min_bias, vcenter=0, vmax=max_bias)
 
