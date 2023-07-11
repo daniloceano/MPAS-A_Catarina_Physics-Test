@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/11 11:02:36 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/11 11:06:12 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -340,7 +340,7 @@ def plot_precipitation_panels(
 
             experiment = experiments[i]
             experiment = get_exp_name(experiment)
-            print(,experiment)
+            print(experiment)
 
             if 'off_' in experiment: continue
             
@@ -358,7 +358,9 @@ def plot_precipitation_panels(
             else:
                 bias = prec_interp-imerg_accprec
                 cf = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,bias,
-                                    cmap=cmap_bias, levels=20, norm=bias_norm, extend='both')
+                                    cmap=cmap_bias, levels=20,
+                                    vmin=min(prec_levels), vmax=max(prec_levels),
+                                    norm=bias_norm, extend='both')
             ax.coastlines(zorder = 1)
             i+=1
 
@@ -440,7 +442,7 @@ def plot_pdfs(data, imerg_accprec, benchmarks_name, experiments, figures_directo
         
             experiment = experiments[i]
             experiment = get_exp_name(experiment)
-            print('\n',experiment)
+            print(experiment)
 
             if 'off_' in experiment: continue
             
@@ -576,7 +578,7 @@ def main(benchmarks_directory, benchmarks_name, experiment_directory, imerg_file
 
     for experiment in experiments:
         experiment_name = get_exp_name(experiment)
-        print('\n', experiment_name)
+        print(experiment_name)
 
         if 'off_' in experiment_name: continue
         
