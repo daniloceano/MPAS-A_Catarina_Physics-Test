@@ -6,7 +6,7 @@
 #    By: Danilo  <danilo.oceano@gmail.com>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/08 09:52:10 by Danilo            #+#    #+#              #
-#    Updated: 2023/07/11 09:48:38 by Danilo           ###   ########.fr        #
+#    Updated: 2023/07/11 10:12:40 by Danilo           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -359,7 +359,7 @@ def plot_precipitation_panels(
                 print('Plotting bias..')
                 bias = prec_interp-imerg_accprec
                 cf = ax.contourf(imerg_accprec.lon, imerg_accprec.lat,bias,
-                                    cmap= cmap_bias, levels=bias_levels, norm=bias_norm)
+                                    cmap= cmap_bias, levels=20, norm=bias_norm)
                 print('bias limits:',float(bias.min()), float(bias.max()))
             ax.coastlines(zorder = 1)
             i+=1
